@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// PayPal API configuration
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || "AbHq-PZViSEb8tZPjsJ2RNb9sbl0BN71KzTuJ8OQmLsXSDofOfC3PkvBHRhM5o2aYHkV7JLb5vytFtIm";
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET || "EL3MwL692rUqx5_k6TwEemCV7OV4GFsNbluhsZGzMqdb_UR_Q_G_8DiKC1vcIe9T2jePtlrPZpAWoRHH";
-const PAYPAL_API = process.env.NODE_ENV === 'production' 
-  ? 'https://api-m.paypal.com' 
-  : 'https://api-m.sandbox.paypal.com';
+const PAYPAL_API = 'https://api-m.sandbox.paypal.com';
 
 async function getPayPalAccessToken() {
   const response = await fetch(`${PAYPAL_API}/v1/oauth2/token`, {
@@ -19,7 +16,7 @@ async function getPayPalAccessToken() {
   
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`PayPal auth failed: ${error}`);
+    throw new Error(`Auth failed: ${error}`);
   }
   
   const data = await response.json();
@@ -32,32 +29,12 @@ export async function POST(req: NextRequest) {
 
     const accessToken = await getPayPalAccessToken();
 
-    // Build items for PayPal
-    const paypalItems = items.map((item: any) => ({
-      name: item.product.name.slice(0, 127),
-      description: item.product.description.slice(0, 127),
-      quantity: item.quantity.toString(),
-      unit_amount: {
-        currency_code: "EUR",
-        value: item.product.price.toFixed(2),
-      },
-      category: "PHYSICAL_GOODS",
-    }));
+    // Calculate item total
+    const itemTotal = items.reduce((sum: number, item: any) => 
+      sum + (item.product.price * item.quantity), 0
+    );
 
-    // Add shipping as separate item if applicable
-    if (shipping > 0) {
-      paypalItems.push({
-        name: "Shipping",
-        description: `Shipping to ${country}`,
-        quantity: "1",
-        unit_amount: {
-          currency_code: "EUR",
-          value: shipping.toFixed(2),
-        },
-        category: "SHIPPING",
-      });
-    }
-
+    // Simplified order without shipping address (PayPal will collect it)
     const orderData = {
       intent: "CAPTURE",
       purchase_units: [
@@ -68,9 +45,7 @@ export async function POST(req: NextRequest) {
             breakdown: {
               item_total: {
                 currency_code: "EUR",
-                value: items.reduce((sum: number, item: any) => 
-                  sum + (item.product.price * item.quantity), 0
-                ).toFixed(2),
+                value: itemTotal.toFixed(2),
               },
               shipping: {
                 currency_code: "EUR",
@@ -78,26 +53,24 @@ export async function POST(req: NextRequest) {
               },
             },
           },
-          items: paypalItems,
-          shipping: {
-            name: {
-              full_name: `${customer.firstName} ${customer.lastName}`,
+          items: items.map((item: any) => ({
+            name: item.product.name.slice(0, 127),
+            quantity: item.quantity.toString(),
+            unit_amount: {
+              currency_code: "EUR",
+              value: item.product.price.toFixed(2),
             },
-            address: {
-              address_line_1: customer.address,
-              admin_area_2: customer.city,
-              postal_code: customer.postalCode,
-              country_code: country,
-            },
-          },
+            category: "PHYSICAL_GOODS",
+          })),
         },
       ],
       application_context: {
         brand_name: "Vintage Watch Co.",
         landing_page: "LOGIN",
         user_action: "PAY_NOW",
-        return_url: `${process.env.NEXT_PUBLIC_URL || 'https://vintage-watch-co.vercel.app'}/success`,
-        cancel_url: `${process.env.NEXT_PUBLIC_URL || 'https://vintage-watch-co.vercel.app'}/checkout`,
+        shipping_preference: "GET_FROM_FILE", // Let PayPal collect shipping
+        return_url: `https://vintage-watch-co.vercel.app/success`,
+        cancel_url: `https://vintage-watch-co.vercel.app/checkout`,
       },
     };
 
@@ -112,25 +85,32 @@ export async function POST(req: NextRequest) {
 
     const order = await response.json();
 
-    if (order.id) {
-      // Find the approval URL
-      const approvalUrl = order.links.find((link: any) => link.rel === "approve")?.href;
-      
-      return NextResponse.json({ 
-        orderId: order.id,
-        approvalUrl: approvalUrl
-      });
-    } else {
-      console.error("PayPal order creation failed:", order);
+    if (!response.ok) {
+      console.error("PayPal order error:", order);
       return NextResponse.json(
-        { error: "Failed to create PayPal order", details: order },
+        { error: "PayPal error", details: order },
         { status: 500 }
       );
     }
+
+    const approvalUrl = order.links?.find((link: any) => link.rel === "approve")?.href;
+    
+    if (!approvalUrl) {
+      return NextResponse.json(
+        { error: "No approval URL" },
+        { status: 500 }
+      );
+    }
+    
+    return NextResponse.json({ 
+      orderId: order.id,
+      approvalUrl
+    });
+
   } catch (error: any) {
-    console.error("PayPal error:", error);
+    console.error("Checkout error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to create checkout session" },
+      { error: error.message },
       { status: 500 }
     );
   }
