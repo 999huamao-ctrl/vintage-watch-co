@@ -8,6 +8,7 @@ import Link from "next/link";
 export default function CheckoutPage() {
   const { items, getTotalPrice, clearCart } = useCart();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const [country, setCountry] = useState("DE");
   const [formData, setFormData] = useState({
     email: "",
@@ -23,9 +24,11 @@ export default function CheckoutPage() {
   const total = subtotal + shipping;
 
   const handleCheckout = async () => {
+    setError("");
+    
     if (!formData.email || !formData.firstName || !formData.lastName || 
         !formData.address || !formData.city || !formData.postalCode) {
-      alert("Please fill in all shipping information");
+      setError("Please fill in all shipping information");
       return;
     }
 
@@ -46,15 +49,18 @@ export default function CheckoutPage() {
 
       const data = await response.json();
 
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create checkout");
+      }
+
       if (data.approvalUrl) {
-        // Redirect to PayPal
         window.location.href = data.approvalUrl;
       } else {
-        alert("Failed to create checkout. Please try again.");
+        setError("Failed to get PayPal URL. Please try again.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Checkout error:", error);
-      alert("Something went wrong. Please try again.");
+      setError(error.message || "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -160,6 +166,12 @@ export default function CheckoutPage() {
             {/* Pay with PayPal Button */}
             <div className="mt-6 bg-white p-6 rounded-xl">
               <h2 className="text-lg font-semibold mb-4">Payment</h2>
+              
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg mb-4 text-sm">
+                  {error}
+                </div>
+              )}
               
               <button
                 onClick={handleCheckout}
