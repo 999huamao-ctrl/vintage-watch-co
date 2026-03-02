@@ -2,14 +2,12 @@
 
 import { useCart } from "@/lib/cart";
 import { shippingRates, freeShippingThreshold } from "@/lib/data";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
-
-// Hardcoded PayPal Client ID for now - replace with your own
-const PAYPAL_CLIENT_ID = "AbHq-PZViSEb8tZPjsJ2RNb9sbl0BN71KzTuJ8OQmLsXSDofOfC3PkvBHRhM5o2aYHkV7JLb5vytFtIm";
 
 export default function CheckoutPage() {
   const { items, getTotalPrice, clearCart } = useCart();
+  const [isLoading, setIsLoading] = useState(false);
   const [country, setCountry] = useState("DE");
   const [formData, setFormData] = useState({
     email: "",
@@ -19,105 +17,48 @@ export default function CheckoutPage() {
     city: "",
     postalCode: "",
   });
-  const [paypalReady, setPaypalReady] = useState(false);
-  const [error, setError] = useState("");
 
   const subtotal = getTotalPrice();
   const shipping = subtotal >= freeShippingThreshold ? 0 : (shippingRates[country]?.rate || 10);
   const total = subtotal + shipping;
 
-  // Load PayPal SDK
-  useEffect(() => {
-    // Check if script already exists
-    if (document.getElementById('paypal-sdk')) {
-      if (window.paypal) {
-        setPaypalReady(true);
-      }
+  const handleCheckout = async () => {
+    if (!formData.email || !formData.firstName || !formData.lastName || 
+        !formData.address || !formData.city || !formData.postalCode) {
+      alert("Please fill in all shipping information");
       return;
     }
 
-    const script = document.createElement('script');
-    script.id = 'paypal-sdk';
-    script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=EUR&intent=capture`;
-    script.async = true;
-    script.onload = () => {
-      console.log('PayPal SDK loaded successfully');
-      setPaypalReady(true);
-    };
-    script.onerror = (e) => {
-      console.error('PayPal SDK failed to load', e);
-      setError('Failed to load PayPal. Please refresh the page.');
-    };
-    document.body.appendChild(script);
-  }, []);
-
-  // Render PayPal buttons
-  useEffect(() => {
-    if (!paypalReady || !window.paypal || items.length === 0) return;
-
-    const container = document.getElementById('paypal-button-container');
-    if (!container) return;
-    
-    // Clear previous buttons
-    container.innerHTML = '';
+    setIsLoading(true);
 
     try {
-      window.paypal.Buttons({
-        createOrder: async () => {
-          try {
-            const response = await fetch("/api/checkout", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                items,
-                shipping,
-                total,
-                customer: formData,
-                country,
-              }),
-            });
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items,
+          shipping,
+          total,
+          customer: formData,
+          country,
+        }),
+      });
 
-            if (!response.ok) {
-              throw new Error('Failed to create order');
-            }
+      const data = await response.json();
 
-            const data = await response.json();
-            return data.orderId;
-          } catch (error) {
-            console.error("Error creating order:", error);
-            alert("Failed to create order. Please try again.");
-            throw error;
-          }
-        },
-        onApprove: async (data: any, actions: any) => {
-          try {
-            const details = await actions.order.capture();
-            clearCart();
-            window.location.href = `/success?order_id=${details.id}`;
-          } catch (error) {
-            console.error("Payment failed:", error);
-            alert("Payment failed. Please try again.");
-          }
-        },
-        onError: (err: any) => {
-          console.error("PayPal error:", err);
-          setError('Payment error. Please try again.');
-        },
-        onCancel: () => {
-          console.log('Payment cancelled');
-        },
-        style: {
-          layout: 'vertical',
-          color: 'gold',
-          shape: 'rect',
-          label: 'pay',
-        },
-      }).render('#paypal-button-container');
-    } catch (e) {
-      console.error('Failed to render PayPal buttons:', e);
-      setError('Failed to initialize PayPal. Please refresh.');
+      if (data.approvalUrl) {
+        // Redirect to PayPal
+        window.location.href = data.approvalUrl;
+      } else {
+        alert("Failed to create checkout. Please try again.");
+      }
+    } catch (error) {
+      console.error("Checkout error:", error);
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-  }, [paypalReady, items, shipping, total, country, formData, clearCart]);
+  };
 
   if (items.length === 0) {
     return (
@@ -135,9 +76,6 @@ export default function CheckoutPage() {
       </div>
     );
   }
-
-  const isFormComplete = formData.email && formData.firstName && formData.lastName && 
-                         formData.address && formData.city && formData.postalCode;
 
   return (
     <div className="min-h-screen bg-stone-50 py-8">
@@ -219,30 +157,33 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* PayPal Button */}
+            {/* Pay with PayPal Button */}
             <div className="mt-6 bg-white p-6 rounded-xl">
               <h2 className="text-lg font-semibold mb-4">Payment</h2>
               
-              {error && (
-                <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
-                  {error}
-                </div>
-              )}
+              <button
+                onClick={handleCheckout}
+                disabled={isLoading}
+                className="w-full bg-[#0070BA] text-white py-4 rounded-xl font-medium hover:bg-[#005ea6] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.59 3.025-2.566 6.082-8.558 6.082H9.63l-1.496 9.478h2.79c.457 0 .85-.334.922-.788l.04-.19.73-4.627.047-.255a.933.933 0 0 1 .922-.788h.58c3.76 0 6.704-1.528 7.565-5.62.317-1.629.196-2.987-.407-4.005z"/>
+                    </svg>
+                    Pay with PayPal €{total.toFixed(2)}
+                  </>
+                )}
+              </button>
               
-              {!isFormComplete ? (
-                <p className="text-stone-500 text-center py-4">
-                  Please fill in all shipping information to proceed with payment.
-                </p>
-              ) : (
-                <div id="paypal-button-container" className="min-h-[150px]">
-                  {!paypalReady && (
-                    <div className="text-center py-4">
-                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-amber-700"></div>
-                      <p className="mt-2 text-stone-500">Loading PayPal...</p>
-                    </div>
-                  )}
-                </div>
-              )}
+              <p className="text-center text-stone-500 text-sm mt-4">
+                You will be redirected to PayPal to complete your payment.
+              </p>
             </div>
           </div>
 

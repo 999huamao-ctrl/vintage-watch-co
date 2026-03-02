@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // PayPal API configuration
-const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
-const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
+const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || "AbHq-PZViSEb8tZPjsJ2RNb9sbl0BN71KzTuJ8OQmLsXSDofOfC3PkvBHRhM5o2aYHkV7JLb5vytFtIm";
+const PAYPAL_SECRET = process.env.PAYPAL_SECRET || "EL3MwL692rUqx5_k6TwEemCV7OV4GFsNbluhsZGzMqdb_UR_Q_G_8DiKC1vcIe9T2jePtlrPZpAWoRHH";
 const PAYPAL_API = process.env.NODE_ENV === 'production' 
   ? 'https://api-m.paypal.com' 
   : 'https://api-m.sandbox.paypal.com';
@@ -17,6 +17,11 @@ async function getPayPalAccessToken() {
     body: 'grant_type=client_credentials',
   });
   
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`PayPal auth failed: ${error}`);
+  }
+  
   const data = await response.json();
   return data.access_token;
 }
@@ -29,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     // Build items for PayPal
     const paypalItems = items.map((item: any) => ({
-      name: item.product.name.slice(0, 127), // PayPal limit
+      name: item.product.name.slice(0, 127),
       description: item.product.description.slice(0, 127),
       quantity: item.quantity.toString(),
       unit_amount: {
@@ -89,11 +94,10 @@ export async function POST(req: NextRequest) {
       ],
       application_context: {
         brand_name: "Vintage Watch Co.",
-        landing_page: "BILLING",
-        shipping_preference: "SET_PROVIDED_ADDRESS",
+        landing_page: "LOGIN",
         user_action: "PAY_NOW",
-        return_url: `${process.env.NEXT_PUBLIC_URL}/success`,
-        cancel_url: `${process.env.NEXT_PUBLIC_URL}/checkout`,
+        return_url: `${process.env.NEXT_PUBLIC_URL || 'https://vintage-watch-co.vercel.app'}/success`,
+        cancel_url: `${process.env.NEXT_PUBLIC_URL || 'https://vintage-watch-co.vercel.app'}/checkout`,
       },
     };
 
@@ -109,21 +113,24 @@ export async function POST(req: NextRequest) {
     const order = await response.json();
 
     if (order.id) {
+      // Find the approval URL
+      const approvalUrl = order.links.find((link: any) => link.rel === "approve")?.href;
+      
       return NextResponse.json({ 
         orderId: order.id,
-        approvalUrl: order.links.find((link: any) => link.rel === "approve")?.href
+        approvalUrl: approvalUrl
       });
     } else {
       console.error("PayPal order creation failed:", order);
       return NextResponse.json(
-        { error: "Failed to create PayPal order" },
+        { error: "Failed to create PayPal order", details: order },
         { status: 500 }
       );
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("PayPal error:", error);
     return NextResponse.json(
-      { error: "Failed to create checkout session" },
+      { error: error.message || "Failed to create checkout session" },
       { status: 500 }
     );
   }
