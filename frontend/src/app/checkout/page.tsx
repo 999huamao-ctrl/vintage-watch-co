@@ -2,12 +2,14 @@
 
 import { useCart } from "@/lib/cart";
 import { shippingRates, freeShippingThreshold } from "@/lib/data";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+
+// Hardcoded PayPal Client ID for now - replace with your own
+const PAYPAL_CLIENT_ID = "AbHq-PZViSEb8tZPjsJ2RNb9sbl0BN71KzTuJ8OQmLsXSDofOfC3PkvBHRhM5o2aYHkV7JLb5vytFtIm";
 
 export default function CheckoutPage() {
   const { items, getTotalPrice, clearCart } = useCart();
-  const [isLoading, setIsLoading] = useState(false);
   const [country, setCountry] = useState("DE");
   const [formData, setFormData] = useState({
     email: "",
@@ -18,6 +20,7 @@ export default function CheckoutPage() {
     postalCode: "",
   });
   const [paypalReady, setPaypalReady] = useState(false);
+  const [error, setError] = useState("");
 
   const subtotal = getTotalPrice();
   const shipping = subtotal >= freeShippingThreshold ? 0 : (shippingRates[country]?.rate || 10);
@@ -25,21 +28,27 @@ export default function CheckoutPage() {
 
   // Load PayPal SDK
   useEffect(() => {
-    if (window.paypal) {
-      setPaypalReady(true);
+    // Check if script already exists
+    if (document.getElementById('paypal-sdk')) {
+      if (window.paypal) {
+        setPaypalReady(true);
+      }
       return;
     }
 
     const script = document.createElement('script');
-    script.src = `https://www.paypal.com/sdk/js?client-id=${process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID}&currency=EUR&intent=capture`;
+    script.id = 'paypal-sdk';
+    script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=EUR&intent=capture`;
     script.async = true;
-    script.onload = () => setPaypalReady(true);
-    script.onerror = () => console.error('PayPal SDK failed to load');
-    document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
+    script.onload = () => {
+      console.log('PayPal SDK loaded successfully');
+      setPaypalReady(true);
     };
+    script.onerror = (e) => {
+      console.error('PayPal SDK failed to load', e);
+      setError('Failed to load PayPal. Please refresh the page.');
+    };
+    document.body.appendChild(script);
   }, []);
 
   // Render PayPal buttons
@@ -47,51 +56,67 @@ export default function CheckoutPage() {
     if (!paypalReady || !window.paypal || items.length === 0) return;
 
     const container = document.getElementById('paypal-button-container');
-    if (!container || container.childNodes.length > 0) return;
+    if (!container) return;
+    
+    // Clear previous buttons
+    container.innerHTML = '';
 
-    window.paypal.Buttons({
-      createOrder: async () => {
-        try {
-          const response = await fetch("/api/checkout", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              items,
-              shipping,
-              total,
-              customer: formData,
-              country,
-            }),
-          });
+    try {
+      window.paypal.Buttons({
+        createOrder: async () => {
+          try {
+            const response = await fetch("/api/checkout", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                items,
+                shipping,
+                total,
+                customer: formData,
+                country,
+              }),
+            });
 
-          const data = await response.json();
-          return data.orderId;
-        } catch (error) {
-          console.error("Error creating order:", error);
-          throw error;
-        }
-      },
-      onApprove: async (data: any, actions: any) => {
-        try {
-          const details = await actions.order.capture();
-          clearCart();
-          window.location.href = `/success?order_id=${details.id}`;
-        } catch (error) {
-          console.error("Payment failed:", error);
-          alert("Payment failed. Please try again.");
-        }
-      },
-      onError: (err: any) => {
-        console.error("PayPal error:", err);
-        alert("Payment error. Please try again.");
-      },
-      style: {
-        layout: 'vertical',
-        color: 'gold',
-        shape: 'rect',
-        label: 'pay',
-      },
-    }).render('#paypal-button-container');
+            if (!response.ok) {
+              throw new Error('Failed to create order');
+            }
+
+            const data = await response.json();
+            return data.orderId;
+          } catch (error) {
+            console.error("Error creating order:", error);
+            alert("Failed to create order. Please try again.");
+            throw error;
+          }
+        },
+        onApprove: async (data: any, actions: any) => {
+          try {
+            const details = await actions.order.capture();
+            clearCart();
+            window.location.href = `/success?order_id=${details.id}`;
+          } catch (error) {
+            console.error("Payment failed:", error);
+            alert("Payment failed. Please try again.");
+          }
+        },
+        onError: (err: any) => {
+          console.error("PayPal error:", err);
+          setError('Payment error. Please try again.');
+        },
+        onCancel: () => {
+          console.log('Payment cancelled');
+        },
+        style: {
+          layout: 'vertical',
+          color: 'gold',
+          shape: 'rect',
+          label: 'pay',
+        },
+      }).render('#paypal-button-container');
+    } catch (e) {
+      console.error('Failed to render PayPal buttons:', e);
+      setError('Failed to initialize PayPal. Please refresh.');
+    }
   }, [paypalReady, items, shipping, total, country, formData, clearCart]);
 
   if (items.length === 0) {
@@ -197,6 +222,12 @@ export default function CheckoutPage() {
             {/* PayPal Button */}
             <div className="mt-6 bg-white p-6 rounded-xl">
               <h2 className="text-lg font-semibold mb-4">Payment</h2>
+              
+              {error && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
+                  {error}
+                </div>
+              )}
               
               {!isFormComplete ? (
                 <p className="text-stone-500 text-center py-4">
