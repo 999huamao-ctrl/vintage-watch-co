@@ -1,0 +1,40 @@
+Handle,Title,Body (HTML),Vendor,Type,Tags,Published,Option1 Name,Option1 Value,Option2 Name,Option2 Value,Option3 Name,Option3 Value,Variant SKU,Variant Grams,Variant Inventory Tracker,Variant Inventory Qty,Variant Inventory Policy,Variant Fulfillment Service,Variant Price,Variant Compare At Price,Variant Requires Shipping,Variant Taxable,Variant Barcode,Image Src,Image Position,Image Alt Text,Gift Card,SEO Title,SEO Description,Google Shopping / Google Product Category,Google Shopping / Gender,Google Shopping / Age Group,Google Shopping / MPN,Google Shopping / AdWords Grouping,Google Shopping / AdWords Labels,Google Shopping / Condition,Google Shopping / Custom Product,Google Shopping / Custom Label 0,Google Shopping / Custom Label 1,Google Shopping / Custom Label 2,Google Shopping / Custom Label 3,Google Shopping / Custom Label 4,Variant Image,Variant Weight Unit,Variant Tax Code,Cost per item
+heritage-42,The Heritage 42,"<p>A timeless vintage dress watch featuring a 42mm case, automatic movement, and genuine leather strap. Perfect for the modern gentleman who appreciates classic design.</p>
+
+<h3>Specifications</h3>
+<ul>
+<li>Case Size: 42mm</li>
+<li>Movement: Automatic mechanical</li>
+<li>Strap: Genuine leather</li>
+<li>Water Resistance: 3ATM</li>
+<li>Crystal: Mineral glass</li>
+</ul>
+
+<h3>Shipping</h3>
+<p>Free shipping to UK, Germany, France, Italy, Spain and 12 other European countries. Delivery in 9-12 business days.</p>",Vintage Watch Co.,Wristwatch,"vintage, classic, automatic, leather",TRUE,Color,Brown,,,,,VWC-H42-001,80,shopify,100,deny,manual,79.00,,TRUE,TRUE,,,,,,FALSE,The Heritage 42 | Vintage Automatic Watch,"Classic 42mm vintage dress watch with automatic movement and genuine leather strap. Free EU shipping.",Accessories & Jewelry,unisex,adult,VWC-H42-BR,vintage-watches,heritage classic automatic,New,FALSE,,,,,,,kg,,
+classic-chrono,The Classic Chrono,"<p>A sophisticated vintage chronograph featuring precise quartz movement and stainless steel construction. The perfect blend of retro style and modern reliability.</p>
+
+<h3>Specifications</h3>
+<ul>
+<li>Case Size: 40mm</li>
+<li>Movement: Quartz chronograph</li>
+<li>Strap: Stainless steel bracelet</li>
+<li>Water Resistance: 5ATM</li>
+<li>Crystal: Mineral glass</li>
+</ul>
+
+<h3>Shipping</h3>
+<p>Free shipping to UK, Germany, France, Italy, Spain and 12 other European countries. Delivery in 9-12 business days.</p>",Vintage Watch Co.,Wristwatch,"vintage, chronograph, quartz, steel",TRUE,Color,Silver,,,,,VWC-CC-001,85,shopify,100,deny,manual,89.00,,TRUE,TRUE,,,,,,FALSE,The Classic Chrono | Vintage Chronograph Watch,"Vintage 40mm chronograph with quartz movement and stainless steel bracelet. Free EU shipping.",Accessories & Jewelry,unisex,adult,VWC-CC-SI,vintage-watches,chronograph classic steel,New,FALSE,,,,,,,kg,,
+minimalist,The Minimalist,"<p>Embrace timeless simplicity with this elegant minimalist watch. Clean lines, refined details, and a comfortable mesh band make it the perfect everyday companion.</p>
+
+<h3>Specifications</h3>
+<ul>
+<li>Case Size: 38mm</li>
+<li>Movement: Japanese quartz</li>
+<li>Strap: Milanese mesh band</li>
+<li>Water Resistance: 3ATM</li>
+<li>Crystal: Mineral glass</li>
+</ul>
+
+<h3>Shipping</h3>
+<p>Free shipping to UK, Germany, France, Italy, Spain and 12 other European countries. Delivery in 9-12 business days.</p>",Vintage Watch Co.,Wristwatch,"minimalist, simple, quartz, mesh",TRUE,Color,Silver,,,,,VWC-MN-001,75,shopify,100,deny,manual,69.00,,TRUE,TRUE,,,,,,FALSE,The Minimalist | Simple Vintage Watch,"Elegant 38mm minimalist watch with Japanese quartz movement and Milanese mesh band. Free EU shipping.",Accessories & Jewelry,unisex,adult,VWC-MN-SI,vintage-watches,minimalist simple mesh,New,FALSE,,,,,,,kg,,
