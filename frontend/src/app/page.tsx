@@ -73,7 +73,7 @@ export default function Home() {
                     <div className="relative w-60 h-60">
                       <svg viewBox="0 0 200 200" className="w-full h-full">
                         <circle cx="100" cy="100" r="95" fill="none" stroke="white" strokeWidth="2" />
-                        <!-- Hour markers -->
+                        {/* Hour markers */}
                         {[...Array(12)].map((_, i) => {
                           const angle = (i * 30 - 90) * (Math.PI / 180);
                           const x1 = 100 + 80 * Math.cos(angle);
@@ -93,7 +93,7 @@ export default function Home() {
                           );
                         })}
                         
-                        <!-- Hands -->
+                        {/* Hands */}
                         <line x1="100" y1="100" x2="100" y2="40" stroke="white" strokeWidth="4" strokeLinecap="round" />
                         <line x1="100" y1="100" x2="130" y2="100" stroke="white" strokeWidth="3" strokeLinecap="round" />
                         <circle cx="100" cy="100" r="8" fill="white" />
