@@ -23,7 +23,7 @@ export const products: Product[] = [
     name: "The Heritage 42",
     description: "A timeless vintage dress watch featuring a 42mm case, automatic movement, and genuine leather strap. Perfect for the modern gentleman.",
     price: 79,
-    image: "/products/heritage-42.jpg",
+    image: "https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=600&h=600&fit=crop",
     category: "Heritage Collection",
     specs: { caseSize: "42mm", movement: "Automatic", strap: "Genuine Leather", waterResistance: "3ATM", crystal: "Mineral" },
     inStock: true,
@@ -415,3 +415,16 @@ export const shippingRates: Record<string, { rate: number; name: string }> = {
 };
 
 export const freeShippingThreshold = 79;
+// Image URLs for 30 products
+const imageUrls = [
+  "https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=600&h=600&fit=crop",
+  "https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?w=600&h=600&fit=crop",
+  "https://images.unsplash.com/photo-1524805444758-089113d48a6d?w=600&h=600&fit=crop",
+  "https://images.unsplash.com/photo-1533139502658-0198f920d8e8?w=600&h=600&fit=crop",
+  "https://images.unsplash.com/photo-1547996160-81dfa63595aa?w=600&h=600&fit=crop",
+  "https://images.unsplash.com/photo-1614164185128-e4ec99c436d7?w=600&h=600&fit=crop",
+  "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=600&h=600&fit=crop",
+  "https://images.unsplash.com/photo-1434056886845-dbd53c8f6d7a?w=600&h=600&fit=crop",
+  "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=600&h=600&fit=crop",
+  "https://images.unsplash.com/photo-1619134778706-7015533a6150?w=600&h=600&fit=crop",
+];
