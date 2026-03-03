@@ -4,7 +4,7 @@ import { useCart } from "@/lib/cart";
 import { shippingRates, freeShippingThreshold } from "@/lib/data";
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, Lock, Truck, CreditCard, ShieldCheck } from "lucide-react";
+import { ChevronLeft, Lock, Truck, CreditCard, ShieldCheck, ShoppingBag } from "lucide-react";
 
 export default function CheckoutPage() {
   const { items, getTotalPrice, clearCart } = useCart();
