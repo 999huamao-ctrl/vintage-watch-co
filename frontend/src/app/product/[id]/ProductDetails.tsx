@@ -28,12 +28,12 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   };
 
   const thumbnails = [
-    { label: "正面", color: "from-stone-800 to-stone-900", icon: "◯" },
-    { label: "侧面", color: "from-stone-700 to-stone-800", icon: "◐" },
-    { label: "背面", color: "from-stone-800 to-stone-900", icon: "◉" },
-    { label: "细节", color: "from-amber-900/40 to-stone-900", icon: "✦" },
-    { label: "佩戴", color: "from-stone-700 to-stone-800", icon: "⌚" },
-    { label: "包装", color: "from-stone-800 to-stone-900", icon: "🎁" },
+    { label: "Front", color: "from-stone-800 to-stone-900", icon: "◯" },
+    { label: "Side", color: "from-stone-700 to-stone-800", icon: "◐" },
+    { label: "Back", color: "from-stone-800 to-stone-900", icon: "◉" },
+    { label: "Detail", color: "from-amber-900/40 to-stone-900", icon: "✦" },
+    { label: "Worn", color: "from-stone-700 to-stone-800", icon: "⌚" },
+    { label: "Box", color: "from-stone-800 to-stone-900", icon: "🎁" },
   ];
 
   return (
@@ -43,7 +43,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <Link href="/" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
             <ChevronLeft className="w-4 h-4" />
-            返回首页
+            Back to Home
           </Link>
         </div>
       </div>
@@ -138,7 +138,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-sm text-gray-500">{product.category}</span>
                 <span className="text-gray-300">·</span>
-                <span className="text-sm text-green-600 font-medium">有库存</span>
+                <span className="text-sm text-green-600 font-medium">In Stock</span>
               </div>
               <h1 className="text-4xl font-serif mb-4">{product.name}</h1>
               
@@ -148,7 +148,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                     <Star key={i} className="w-5 h-5 text-amber-400 fill-amber-400" />
                   ))}
                 </div>
-                <span className="text-sm text-gray-500">128 条评价</span>
+                <span className="text-sm text-gray-500">128 reviews</span>
               </div>
 
               <div className="flex items-baseline gap-3 mb-4">
@@ -156,7 +156,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                   €{product.price}
                 </span>
                 <span className="text-gray-400 line-through">€{Math.round(product.price * 1.3)}</span>
-                <span className="bg-rose-100 text-rose-600 text-sm font-medium px-2 py-1 rounded">省 €{Math.round(product.price * 0.3)}</span>
+                <span className="bg-rose-100 text-rose-600 text-sm font-medium px-2 py-1 rounded">Save €{Math.round(product.price * 0.3)}</span>
               </div>
 
               <p className="text-gray-600 leading-relaxed">{product.description}</p>
@@ -165,17 +165,17 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             {/* Specs */}
             <div className="bg-white rounded-xl border p-6">
               <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <span>规格参数</span>
-                <span className="text-xs text-gray-400 font-normal">高品质保证</span>
+                <span>Specifications</span>
+                <span className="text-xs text-gray-400 font-normal">High Quality Guarantee</span>
               </h3>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { label: "表径", value: product.specs.caseSize },
-                  { label: "机芯", value: product.specs.movement },
-                  { label: "表带", value: product.specs.strap },
-                  { label: "防水", value: product.specs.waterResistance },
-                  { label: "表镜", value: product.specs.crystal },
-                  { label: "产地", value: "中国" },
+                  { label: "Case Size", value: product.specs.caseSize },
+                  { label: "Movement", value: product.specs.movement },
+                  { label: "Strap", value: product.specs.strap },
+                  { label: "Water Resistance", value: product.specs.waterResistance },
+                  { label: "Crystal", value: product.specs.crystal },
+                  { label: "Origin", value: "China" },
                 ].map(({ label, value }) => (
                   <div key={label} className="flex justify-between py-2 border-b last:border-0">
                     <span className="text-gray-500">{label}</span>
@@ -188,7 +188,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             {/* Quantity & Add to Cart */}
             <div className="bg-white rounded-xl border p-6 shadow-sm">
               <div className="flex items-center gap-4 mb-6">
-                <span className="font-medium">数量</span>
+                <span className="font-medium">Quantity</span>
                 <div className="flex items-center border-2 border-gray-200 rounded-xl">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -215,7 +215,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                 }`}
               >
                 <ShoppingCart className="w-5 h-5" />
-                {added ? "已加入购物车" : `加入购物车 - €${(product.price * quantity).toFixed(2)}`}
+                {added ? "Added to Cart" : `Add to Cart - €${(product.price * quantity).toFixed(2)}`}
               </button>
             </div>
 
@@ -225,19 +225,19 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                 <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm">
                   <Truck className="w-5 h-5 text-stone-600" />
                 </div>
-                <span className="text-gray-600">免费配送</span>
+                <span className="text-gray-600">Free Shipping</span>
               </div>
               <div className="flex flex-col items-center gap-2">
                 <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm">
                   <Shield className="w-5 h-5 text-stone-600" />
                 </div>
-                <span className="text-gray-600">2年质保</span>
+                <span className="text-gray-600">2 Year Warranty</span>
               </div>
               <div className="flex flex-col items-center gap-2">
                 <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm">
                   <RotateCcw className="w-5 h-5 text-stone-600" />
                 </div>
-                <span className="text-gray-600">30天退换</span>
+                <span className="text-gray-600">30 Day Returns</span>
               </div>
             </div>
           </div>
@@ -246,7 +246,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
         {/* Related Products */}
         {relatedProducts.length > 0 && (
           <div className="mt-16 pt-8 border-t">
-            <h2 className="text-2xl font-serif mb-6">相关推荐</h2>
+            <h2 className="text-2xl font-serif mb-6">Related Products</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {relatedProducts.map(p => (
                 <Link

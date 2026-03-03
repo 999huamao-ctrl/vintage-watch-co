@@ -7,8 +7,8 @@ export default function ShopPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 py-8">
-          <h1 className="text-3xl md:text-4xl font-serif mb-2">全部产品</h1>
-          <p className="text-gray-600">共 {products.length} 款复古风格腕表</p>
+          <h1 className="text-3xl md:text-4xl font-serif mb-2">All Watches</h1>
+          <p className="text-gray-600">{products.length} vintage-inspired timepieces</p>
         </div>
       </div>
 
@@ -19,12 +19,12 @@ export default function ShopPage() {
             <div className="bg-white rounded-xl border p-6 sticky top-24">
               <div className="flex items-center gap-2 mb-6">
                 <SlidersHorizontal className="w-5 h-5" />
-                <h2 className="font-semibold">筛选</h2>
+                <h2 className="font-semibold">Filters</h2>
               </div>
 
               <div className="space-y-6">
                 <div>
-                  <h3 className="font-medium mb-3">系列</h3>
+                  <h3 className="font-medium mb-3">Collections</h3>
                   <div className="space-y-2">
                     {categories.filter(c => c !== "All").slice(0, 6).map(category => (
                       <label key={category} className="flex items-center gap-2 cursor-pointer">
@@ -41,11 +41,11 @@ export default function ShopPage() {
           {/* Product Grid */}
           <div className="flex-1">
             <div className="flex items-center justify-between mb-6">
-              <p className="text-gray-600">显示 {products.length} 款产品</p>
+              <p className="text-gray-600">Showing {products.length} products</p>
               <select className="border rounded-lg px-3 py-2 text-sm">
-                <option>默认排序</option>
-                <option>价格从低到高</option>
-                <option>价格从高到低</option>
+                <option>Sort by: Featured</option>
+                <option>Price: Low to High</option>
+                <option>Price: High to Low</option>
               </select>
             </div>
 
@@ -56,8 +56,7 @@ export default function ShopPage() {
                   href={`/product/${product.id}`}
                   className="group bg-white rounded-xl border overflow-hidden hover:shadow-xl transition-all"
                 >
-                  <div className="aspect-square bg-gradient-to-br from-stone-800 to-stone-900 flex items-center justify-center relative"
-003e
+                  <div className="aspect-square bg-gradient-to-br from-stone-800 to-stone-900 flex items-center justify-center relative">
                     {product.badge && (
                       <div className="absolute top-3 left-3 bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-full">
                         {product.badge}

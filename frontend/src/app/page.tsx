@@ -24,15 +24,15 @@ export default function Home() {
             <div className="text-white">
               <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur px-4 py-2 rounded-full mb-6">
                 <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                <span className="text-sm">瑞士机芯 · 欧洲直邮</span>
+                <span className="text-sm">Swiss Movement · EU Shipping</span>
               </div>
 
               <h1 className="text-4xl md:text-6xl font-serif mb-6 leading-tight">
-                简约而不简单
+                Timeless Elegance
               </h1>
 
               <p className="text-xl md:text-2xl text-stone-300 mb-4">
-                瑞士机芯 · 欧洲直邮
+                Swiss Movement · EU Shipping
               </p>
 
               <div className="text-3xl md:text-4xl font-bold text-amber-400 mb-8">
@@ -43,22 +43,22 @@ export default function Home() {
                 href="/shop"
                 className="inline-flex items-center gap-2 bg-amber-500 text-stone-900 px-8 py-4 rounded-lg font-bold text-lg hover:bg-amber-400 transition-colors"
               >
-                查看全部
+                Shop All
                 <ArrowRight className="w-5 h-5" />
               </Link>
 
               <div className="flex items-center gap-6 mt-12 text-sm text-stone-400">
                 <div className="flex items-center gap-2">
                   <Truck className="w-4 h-4" />
-                  <span>免费配送</span>
+                  <span>Free Shipping</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4" />
-                  <span>2年质保</span>
+                  <span>2 Year Warranty</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <RotateCcw className="w-4 h-4" />
-                  <span>30天退换</span>
+                  <span>30 Day Returns</span>
                 </div>
               </div>
             </div>
@@ -113,8 +113,8 @@ export default function Home() {
       {/* Bestsellers Section */}
       <section className="py-20 px-4 max-w-7xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-serif mb-4">热销推荐</h2>
-          <p className="text-gray-600">深受顾客喜爱的经典款式</p>
+          <h2 className="text-3xl font-serif mb-4">Bestsellers</h2>
+          <p className="text-gray-600">Our most loved timepieces</p>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -130,7 +130,7 @@ export default function Home() {
             href="/shop"
             className="inline-flex items-center gap-2 border-2 border-stone-900 text-stone-900 px-8 py-3 rounded-lg font-semibold hover:bg-stone-900 hover:text-white transition-colors"
           >
-            查看全部 {products.length} 款手表
+            View All {products.length} Watches
             <ArrowRight className="w-5 h-5" />
           </Link>
         </div>
@@ -140,8 +140,8 @@ export default function Home() {
       <section className="py-20 px-4 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-serif mb-4">客户评价</h2>
-            <p className="text-gray-600">来自全球 2000+ 满意客户的声音</p>
+            <h2 className="text-3xl font-serif mb-4">Customer Reviews</h2>
+            <p className="text-gray-600">From 2000+ satisfied customers worldwide</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6 mb-12">
@@ -188,7 +188,7 @@ export default function Home() {
 
           {/* Payment Methods */}
           <div className="text-center">
-            <p className="text-sm text-gray-500 mb-4">安全支付方式</p>
+            <p className="text-sm text-gray-500 mb-4">Secure Payment Methods</p>
             <div className="flex items-center justify-center gap-6">
               {['PayPal', 'Visa', 'Mastercard', 'AMEX'].map(method => (
                 <div key={method} className="bg-white px-4 py-2 rounded-lg shadow-sm text-sm font-medium text-gray-600">

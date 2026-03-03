@@ -23,7 +23,7 @@ export default function Navbar() {
               href="/shop"
               className="text-gray-600 hover:text-gray-900 transition-colors hidden sm:block"
             >
-              全部产品
+              All Products
             </Link>
             <button
               onClick={() => setIsCartOpen(true)}
