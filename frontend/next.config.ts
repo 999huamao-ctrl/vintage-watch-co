@@ -5,14 +5,8 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   trailingSlash: true,
-  async rewrites() {
-    return [
-      {
-        source: '/shop',
-        destination: '/shop/',
-      },
-    ];
-  },
+  output: 'export',
+  distDir: 'dist',
 };
 
 export default nextConfig;
