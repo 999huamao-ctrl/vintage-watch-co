@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import ChatWidget from "@/components/ChatWidget";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -30,6 +31,7 @@ export default function RootLayout({
       >
         <Navbar />
         <main>{children}</main>
+        <ChatWidget />
         
         {/* Footer */}
         <footer className="bg-stone-900 text-stone-400 py-12 px-4">
