@@ -148,7 +148,7 @@ export default function ChatWidget() {
                 </div>
                 <div className={`max-w-[80%] p-3 rounded-2xl text-sm whitespace-pre-line ${
                   msg.role === "assistant" 
-                    ? "bg-white border border-gray-200 rounded-tl-none" 
+                    ? "bg-white border border-gray-200 rounded-tl-none text-gray-900" 
                     : "bg-stone-900 text-white rounded-tr-none"
                 }`}>
                   {msg.content}
