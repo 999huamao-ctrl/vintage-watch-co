@@ -1,23 +1,36 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Package, Plus, Edit2, Trash2, Download, Upload, Search, Save, X } from "lucide-react";
+import { Package, Plus, Edit2, Trash2, Download, Upload, Search, Save, X, Wallet, Settings } from "lucide-react";
 import { products as allProducts } from "@/lib/data";
 
 export default function AdminPage() {
   const [products, setProducts] = useState(allProducts);
-  const [view, setView] = useState<"list" | "edit" | "add">("list");
+  const [view, setView] = useState<"list" | "edit" | "add" | "settings">("list");
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [usdtAddress, setUsdtAddress] = useState("");
+  const [usdtSaved, setUsdtSaved] = useState(false);
 
-  // 从 localStorage 加载数据（覆盖默认数据）
+  // 从 localStorage 加载数据
   useEffect(() => {
     const saved = localStorage.getItem("admin_products");
     if (saved) {
       setProducts(JSON.parse(saved));
     }
+    const savedAddress = localStorage.getItem("usdt_address");
+    if (savedAddress) {
+      setUsdtAddress(savedAddress);
+    }
   }, []);
+
+  // 保存 USDT 地址
+  const saveUSDTAddress = () => {
+    localStorage.setItem("usdt_address", usdtAddress);
+    setUsdtSaved(true);
+    setTimeout(() => setUsdtSaved(false), 2000);
+  };
 
   // 保存到 localStorage
   const saveProducts = (newProducts: any[]) => {
@@ -83,8 +96,17 @@ export default function AdminPage() {
             <Package className="w-6 h-6 text-amber-500" />
             <h1 className="text-xl font-serif">Vintage Watch Co. Admin</h1>
           </div>
-          <div className="text-sm text-gray-400">
-            {products.length} products
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setView("settings")}
+              className="flex items-center gap-2 px-3 py-1.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+              Settings
+            </button>
+            <div className="text-sm text-gray-400">
+              {products.length} products
+            </div>
           </div>
         </div>
       </header>
@@ -190,6 +212,64 @@ export default function AdminPage() {
             onCancel={() => { setView("list"); setEditingProduct(null); }}
             isEdit={view === "edit"}
           />
+        )}
+
+        {view === "settings" && (
+          <div className="max-w-2xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-serif">Settings</h2>
+              <button onClick={() => setView("list")} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
+              <div className="flex items-center gap-3 mb-4">
+                <Wallet className="w-6 h-6 text-amber-500" />
+                <h3 className="text-lg font-semibold">Payment Settings</h3>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  USDT Receiving Address (TRC20)
+                </label>
+                <textarea
+                  value={usdtAddress}
+                  onChange={(e) => setUsdtAddress(e.target.value)}
+                  placeholder="Enter your TRC20 USDT address (e.g., TNYsn..."
+                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-mono text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  This address will be displayed on the checkout page for customers to send USDT payments.
+                  Make sure it&apos;s a TRC20 address on the Tron network.
+                </p>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p className="text-sm text-amber-800">
+                  <strong>Important:</strong> Only use TRC20 (Tron) network addresses. 
+                  Payments sent via other networks cannot be recovered.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t">
+                <button
+                  onClick={() => setView("list")}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveUSDTAddress}
+                  className="flex-1 px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-800 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  {usdtSaved ? "Saved!" : "Save Address"}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </main>
 

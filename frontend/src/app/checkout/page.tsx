@@ -2,15 +2,28 @@
 
 import { useCart } from "@/lib/cart";
 import { shippingRates, freeShippingThreshold } from "@/lib/data";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ChevronLeft, Lock, Truck, CreditCard, ShieldCheck, ShoppingBag } from "lucide-react";
+import { ChevronLeft, Lock, Truck, Copy, CheckCircle, Wallet, AlertCircle } from "lucide-react";
+
+// 从 localStorage 获取 USDT 地址
+function getUSDTAddress(): string {
+  if (typeof window === 'undefined') return '';
+  return localStorage.getItem('usdt_address') || '';
+}
+
+// 欧元转 USDT（1:1 简化，实际应该用实时汇率）
+function eurToUSDT(eur: number): number {
+  return Math.ceil(eur * 1.1); // 加 10% 缓冲应对波动
+}
 
 export default function CheckoutPage() {
   const { items, getTotalPrice, clearCart } = useCart();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [country, setCountry] = useState("DE");
+  const [copied, setCopied] = useState(false);
+  const [usdtAddress, setUsdtAddress] = useState("");
   const [formData, setFormData] = useState({
     email: "",
     firstName: "",
@@ -20,51 +33,28 @@ export default function CheckoutPage() {
     postalCode: "",
   });
 
+  useEffect(() => {
+    setUsdtAddress(getUSDTAddress());
+  }, []);
+
   const subtotal = getTotalPrice();
   const shipping = subtotal >= freeShippingThreshold ? 0 : (shippingRates[country]?.rate || 10);
-  const total = subtotal + shipping;
+  const totalEUR = subtotal + shipping;
+  const totalUSDT = eurToUSDT(totalEUR);
 
-  const handleCheckout = async () => {
-    setError("");
-    
-    if (!formData.email || !formData.firstName || !formData.lastName || 
-        !formData.address || !formData.city || !formData.postalCode) {
-      setError("Please fill in all shipping information");
-      return;
+  const handleCopyAddress = () => {
+    if (usdtAddress) {
+      navigator.clipboard.writeText(usdtAddress);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
+  };
 
-    setIsLoading(true);
-
-    try {
-      const response = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items,
-          shipping,
-          total,
-          customer: formData,
-          country,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to create checkout");
-      }
-
-      if (data.approvalUrl) {
-        window.location.href = data.approvalUrl;
-      } else {
-        setError("Failed to get PayPal URL. Please try again.");
-      }
-    } catch (error: any) {
-      console.error("Checkout error:", error);
-      setError(error.message || "Something went wrong. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+  const handleOrderComplete = () => {
+    // 方案A：手动确认后清除购物车
+    alert("Thank you for your order! We'll verify your payment and ship your watch soon.");
+    clearCart();
+    window.location.href = "/success";
   };
 
   if (items.length === 0) {
@@ -72,7 +62,7 @@ export default function CheckoutPage() {
       <div className="min-h-screen bg-gray-50 py-16 px-4">
         <div className="max-w-md mx-auto text-center">
           <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <ShoppingBag className="w-10 h-10 text-gray-400" />
+            <Wallet className="w-10 h-10 text-gray-400" />
           </div>
           <h1 className="text-2xl font-semibold mb-3">Your cart is empty</h1>
           <p className="text-gray-500 mb-8">Add some items to proceed with checkout.</p>
@@ -223,12 +213,12 @@ export default function CheckoutPage() {
               </div>
             </section>
 
-            {/* Payment Section */}
+            {/* Payment Section - USDT */}
             <section className="bg-white rounded-xl border shadow-sm">
               <div className="p-6 border-b bg-gray-50/50 rounded-t-xl">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center font-medium">3</div>
-                  <h2 className="text-lg font-semibold">Payment</h2>
+                  <h2 className="text-lg font-semibold">Payment (USDT - TRC20)</h2>
                 </div>
               </div>
               <div className="p-6">
@@ -240,41 +230,82 @@ export default function CheckoutPage() {
 
                 {!isFormComplete ? (
                   <div className="text-center py-8 text-gray-500">
-                    <CreditCard className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                    <p>Complete shipping information to proceed with payment</p>
+                    <Wallet className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p>Complete shipping information to see payment details</p>
+                  </div>
+                ) : !usdtAddress ? (
+                  <div className="text-center py-8 text-amber-600 bg-amber-50 rounded-lg">
+                    <AlertCircle className="w-12 h-12 mx-auto mb-3" />
+                    <p>USDT payment address not configured.</p>
+                    <p className="text-sm mt-2">Please contact support.</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    <button
-                      onClick={handleCheckout}
-                      disabled={isLoading}
-                      className="w-full bg-[#0070BA] hover:bg-[#005ea6] text-white py-4 rounded-lg font-semibold text-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-                    >
-                      {isLoading ? (
-                        <>
-                          <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.59 3.025-2.566 6.082-8.558 6.082H9.63l-1.496 9.478h2.79c.457 0 .85-.334.922-.788l.04-.19.73-4.627.047-.255a.933.933 0 0 1 .922-.788h.58c3.76 0 6.704-1.528 7.565-5.62.317-1.629.196-2.987-.407-4.005z"/>
-                          </svg>
-                          Pay €{total.toFixed(2)} with PayPal
-                        </>
-                      )}
-                    </button>
-
-                    <div className="flex items-center justify-center gap-4 text-sm text-gray-500 pt-2">
-                      <div className="flex items-center gap-1">
-                        <ShieldCheck className="w-4 h-4" />
-                        <span>Secure Payment</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Lock className="w-4 h-4" />
-                        <span>SSL Encrypted</span>
+                  <div className="space-y-6">
+                    {/* Payment Amount */}
+                    <div className="bg-stone-900 text-white rounded-xl p-6">
+                      <div className="text-center">
+                        <p className="text-gray-400 text-sm mb-2">Total Amount to Pay</p>
+                        <div className="text-4xl font-bold">{totalUSDT} USDT</div>
+                        <p className="text-gray-400 text-sm mt-2">≈ €{totalEUR.toFixed(2)} (including 10% buffer)</p>
                       </div>
                     </div>
+
+                    {/* USDT Address */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Send USDT (TRC20) to this address:
+                      </label>
+                      <div className="flex gap-2">
+                        <div className="flex-1 bg-gray-100 px-4 py-3 rounded-lg font-mono text-sm break-all">
+                          {usdtAddress}
+                        </div>
+                        <button
+                          onClick={handleCopyAddress}
+                          className="px-4 py-3 bg-stone-900 text-white rounded-lg hover:bg-stone-800 transition-colors flex items-center gap-2"
+                        >
+                          {copied ? <CheckCircle className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                          {copied ? "Copied!" : "Copy"}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Instructions */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+                      <h4 className="font-medium text-blue-900 flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4" />
+                        Payment Instructions
+                      </h4>
+                      <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                        <li>Copy the USDT address above</li>
+                        <li>Open your crypto wallet (TronLink, Trust Wallet, etc.)</li>
+                        <li>Send exactly <strong>{totalUSDT} USDT</strong> via TRC20 network</li>
+                        <li>Keep the transaction ID (TXID) for reference</li>
+                        <li>Click "I've completed the payment" below</li>
+                      </ol>
+                    </div>
+
+                    {/* Network Warning */}
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                      <p className="text-sm text-amber-800 flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4" />
+                        <strong>Important:</strong> Only send USDT via <strong>TRC20 (Tron)</strong> network. 
+                        Sending via other networks may result in permanent loss.
+                      </p>
+                    </div>
+
+                    {/* Complete Button */}
+                    <button
+                      onClick={handleOrderComplete}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-lg font-semibold text-lg transition-colors flex items-center justify-center gap-3"
+                    >
+                      <CheckCircle className="w-6 h-6" />
+                      I've completed the payment
+                    </button>
+
+                    <p className="text-xs text-gray-500 text-center">
+                      Your order will be processed after payment verification. 
+                      You'll receive a confirmation email within 24 hours.
+                    </p>
                   </div>
                 )}
               </div>
@@ -328,7 +359,11 @@ export default function CheckoutPage() {
                 <div className="border-t mt-4 pt-4">
                   <div className="flex justify-between text-lg font-semibold">
                     <span>Total</span>
-                    <span>€{total.toFixed(2)}</span>
+                    <span>€{totalEUR.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-green-600 mt-1">
+                    <span>Pay with USDT</span>
+                    <span>{totalUSDT} USDT</span>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">Including VAT</p>
                 </div>
