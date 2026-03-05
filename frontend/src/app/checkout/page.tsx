@@ -45,11 +45,37 @@ export default function CheckoutPage() {
   const totalEUR = subtotal + shipping;
   const totalUSDT = eurToUSDT(totalEUR);
 
-  const handleCopyAddress = () => {
-    if (usdtAddress) {
-      navigator.clipboard.writeText(usdtAddress);
+  const handleCopyAddress = async () => {
+    if (!usdtAddress) return;
+    
+    try {
+      // 尝试使用现代 Clipboard API
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(usdtAddress);
+      } else {
+        // 降级方案：使用传统的复制方法
+        const textArea = document.createElement("textarea");
+        textArea.value = usdtAddress;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        if (!successful) {
+          throw new Error('Copy failed');
+        }
+      }
+      
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Copy failed:', err);
+      // 显示地址让用户手动复制
+      alert(`Please manually copy this address:\n\n${usdtAddress}`);
     }
   };
 
@@ -255,16 +281,16 @@ export default function CheckoutPage() {
 
                     {/* USDT Address */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">
                         Send USDT (TRC20) to this address:
                       </label>
                       <div className="flex gap-2">
-                        <div className="flex-1 bg-gray-100 px-4 py-3 rounded-lg font-mono text-sm break-all">
+                        <div className="flex-1 bg-gray-100 px-4 py-3 rounded-lg font-mono text-sm break-all text-gray-900 font-semibold border-2 border-gray-300">
                           {usdtAddress}
                         </div>
                         <button
                           onClick={handleCopyAddress}
-                          className="px-4 py-3 bg-stone-900 text-white rounded-lg hover:bg-stone-800 transition-colors flex items-center gap-2"
+                          className="px-4 py-3 bg-stone-900 text-white rounded-lg hover:bg-stone-800 transition-colors flex items-center gap-2 whitespace-nowrap"
                         >
                           {copied ? <CheckCircle className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
                           {copied ? "Copied!" : "Copy"}
