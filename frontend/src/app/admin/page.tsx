@@ -320,7 +320,11 @@ export default function AdminPage() {
           <div className="max-w-2xl mx-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-serif">Settings</h2>
-              <button onClick={() => setView("list")} className="p-2 hover:bg-gray-100 rounded-lg">
+              <button 
+                onClick={() => setView("list")} 
+                className="p-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer"
+                type="button"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -463,7 +467,11 @@ function ProductForm({ product, onSave, onCancel, isEdit }: {
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-serif">{isEdit ? "Edit Product" : "Add Product"}</h2>
-        <button onClick={onCancel} className="p-2 hover:bg-gray-100 rounded-lg">
+        <button 
+          onClick={onCancel} 
+          className="p-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer"
+          type="button"
+        >
           <X className="w-5 h-5" />
         </button>
       </div>
