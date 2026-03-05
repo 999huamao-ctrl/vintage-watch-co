@@ -6,10 +6,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ChevronLeft, Lock, Truck, Copy, CheckCircle, Wallet, AlertCircle } from "lucide-react";
 
-// 从 localStorage 获取 USDT 地址
+// 默认 USDT 收款地址
+const DEFAULT_USDT_ADDRESS = "TYRo5Tq9F1ZVngfTdU2heAwmpZbqsWKGXJ";
+
+// 从 localStorage 获取 USDT 地址，如果没有则使用默认地址
 function getUSDTAddress(): string {
-  if (typeof window === 'undefined') return '';
-  return localStorage.getItem('usdt_address') || '';
+  if (typeof window === 'undefined') return DEFAULT_USDT_ADDRESS;
+  return localStorage.getItem('usdt_address') || DEFAULT_USDT_ADDRESS;
 }
 
 // 欧元转 USDT（1:1 简化，实际应该用实时汇率）

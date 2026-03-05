@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import { Package, Plus, Edit2, Trash2, Download, Upload, Search, Save, X, Wallet, Settings } from "lucide-react";
 import { products as allProducts } from "@/lib/data";
 
+// 默认 USDT 收款地址
+const DEFAULT_USDT_ADDRESS = "TYRo5Tq9F1ZVngfTdU2heAwmpZbqsWKGXJ";
+
 export default function AdminPage() {
   const [products, setProducts] = useState(allProducts);
   const [view, setView] = useState<"list" | "edit" | "add" | "settings">("list");
@@ -20,9 +23,7 @@ export default function AdminPage() {
       setProducts(JSON.parse(saved));
     }
     const savedAddress = localStorage.getItem("usdt_address");
-    if (savedAddress) {
-      setUsdtAddress(savedAddress);
-    }
+    setUsdtAddress(savedAddress || DEFAULT_USDT_ADDRESS);
   }, []);
 
   // 保存 USDT 地址
