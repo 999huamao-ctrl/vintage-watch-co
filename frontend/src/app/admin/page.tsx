@@ -1,13 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Package, Plus, Edit2, Trash2, Download, Upload, Search, Save, X, Wallet, Settings } from "lucide-react";
+import { Package, Plus, Edit2, Trash2, Download, Upload, Search, Save, X, Wallet, Settings, Lock, LogOut } from "lucide-react";
 import { products as allProducts } from "@/lib/data";
 
 // 默认 USDT 收款地址
 const DEFAULT_USDT_ADDRESS = "TYRo5Tq9F1ZVngfTdU2heAwmpZbqsWKGXJ";
 
+// 默认登录凭证（实际生产环境应该使用更安全的方式）
+const DEFAULT_USERNAME = "admin";
+const DEFAULT_PASSWORD = "vintage2024";
+
 export default function AdminPage() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loginForm, setLoginForm] = useState({ username: "", password: "" });
+  const [loginError, setLoginError] = useState("");
+  
   const [products, setProducts] = useState(allProducts);
   const [view, setView] = useState<"list" | "edit" | "add" | "settings">("list");
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -16,8 +24,13 @@ export default function AdminPage() {
   const [usdtAddress, setUsdtAddress] = useState("");
   const [usdtSaved, setUsdtSaved] = useState(false);
 
-  // 从 localStorage 加载数据
+  // 检查登录状态
   useEffect(() => {
+    const loggedIn = sessionStorage.getItem("admin_logged_in");
+    if (loggedIn === "true") {
+      setIsLoggedIn(true);
+    }
+    
     const saved = localStorage.getItem("admin_products");
     if (saved) {
       setProducts(JSON.parse(saved));
@@ -26,6 +39,25 @@ export default function AdminPage() {
     setUsdtAddress(savedAddress || DEFAULT_USDT_ADDRESS);
   }, []);
 
+  // 登录处理
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loginForm.username === DEFAULT_USERNAME && loginForm.password === DEFAULT_PASSWORD) {
+      setIsLoggedIn(true);
+      sessionStorage.setItem("admin_logged_in", "true");
+      setLoginError("");
+    } else {
+      setLoginError("Invalid username or password");
+    }
+  };
+
+  // 登出
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    sessionStorage.removeItem("admin_logged_in");
+    setView("list");
+  };
+
   // 保存 USDT 地址
   const saveUSDTAddress = () => {
     localStorage.setItem("usdt_address", usdtAddress);
@@ -33,7 +65,7 @@ export default function AdminPage() {
     setTimeout(() => setUsdtSaved(false), 2000);
   };
 
-  // 保存到 localStorage
+  // 保存产品数据
   const saveProducts = (newProducts: any[]) => {
     setProducts(newProducts);
     localStorage.setItem("admin_products", JSON.stringify(newProducts));
@@ -88,6 +120,68 @@ export default function AdminPage() {
     p.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // 登录页面
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="max-w-md w-full">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8">
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-stone-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Lock className="w-8 h-8 text-amber-500" />
+              </div>
+              <h1 className="text-2xl font-serif font-semibold text-gray-900">Admin Login</h1>
+              <p className="text-gray-500 mt-2">Vintage Watch Co.</p>
+            </div>
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Username</label>
+                <input
+                  type="text"
+                  value={loginForm.username}
+                  onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 transition-colors text-gray-900"
+                  placeholder="admin"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Password</label>
+                <input
+                  type="password"
+                  value={loginForm.password}
+                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 transition-colors text-gray-900"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+
+              {loginError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                  {loginError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="w-full bg-stone-900 text-white py-3 rounded-lg font-semibold hover:bg-stone-800 transition-colors"
+              >
+                Sign In
+              </button>
+            </form>
+
+            <div className="mt-6 text-center text-xs text-gray-400">
+              Default: admin / vintage2024
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -104,6 +198,13 @@ export default function AdminPage() {
             >
               <Settings className="w-4 h-4" />
               Settings
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-3 py-1.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
             </button>
             <div className="text-sm text-gray-400">
               {products.length} products
@@ -231,7 +332,7 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
                   USDT Receiving Address (TRC20)
                 </label>
                 <textarea
@@ -239,7 +340,7 @@ export default function AdminPage() {
                   onChange={(e) => setUsdtAddress(e.target.value)}
                   placeholder="Enter your TRC20 USDT address (e.g., TNYsn..."
                   rows={3}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-mono text-sm"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-mono text-sm text-gray-900"
                 />
                 <p className="text-xs text-gray-500 mt-2">
                   This address will be displayed on the checkout page for customers to send USDT payments.
@@ -370,24 +471,24 @@ function ProductForm({ product, onSave, onCancel, isEdit }: {
       <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Product ID</label>
+            <label className="block text-sm font-semibold text-gray-900 mb-1">Product ID</label>
             <input
               type="text"
               value={form.id}
               onChange={(e) => setForm({ ...form, id: e.target.value })}
               disabled={isEdit}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 disabled:bg-gray-100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 disabled:bg-gray-100 text-gray-900"
               placeholder="e.g., heritage-42"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+            <label className="block text-sm font-semibold text-gray-900 mb-1">Product Name</label>
             <input
               type="text"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
               placeholder="e.g., The Heritage 42"
             />
           </div>
@@ -395,23 +496,23 @@ function ProductForm({ product, onSave, onCancel, isEdit }: {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Price (€)</label>
+            <label className="block text-sm font-semibold text-gray-900 mb-1">Price (€)</label>
             <input
               type="number"
               value={form.price}
               onChange={(e) => setForm({ ...form, price: e.target.value })}
               required
               min="0"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
               placeholder="79"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+            <label className="block text-sm font-semibold text-gray-900 mb-1">Category</label>
             <select
               value={form.category}
               onChange={(e) => setForm({ ...form, category: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
             >
               <option>Heritage Collection</option>
               <option>Chronograph Collection</option>
@@ -423,35 +524,35 @@ function ProductForm({ product, onSave, onCancel, isEdit }: {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
+          <label className="block text-sm font-semibold text-gray-900 mb-1">Image URL</label>
           <input
             type="text"
             value={form.image}
             onChange={(e) => setForm({ ...form, image: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
             placeholder="/products/watch-name.jpg or https://..."
           />
           <p className="mt-1 text-xs text-gray-500">Use /products/ for local images or full URL for external images</p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <label className="block text-sm font-semibold text-gray-900 mb-1">Description</label>
           <textarea
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
             placeholder="Product description..."
           />
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Case Size</label>
+            <label className="block text-sm font-semibold text-gray-900 mb-1">Case Size</label>
             <select
               value={form.caseSize}
               onChange={(e) => setForm({ ...form, caseSize: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
             >
               <option>38mm</option>
               <option>40mm</option>
@@ -460,11 +561,11 @@ function ProductForm({ product, onSave, onCancel, isEdit }: {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Movement</label>
+            <label className="block text-sm font-semibold text-gray-900 mb-1">Movement</label>
             <select
               value={form.movement}
               onChange={(e) => setForm({ ...form, movement: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
             >
               <option>Quartz</option>
               <option>Automatic</option>
@@ -473,11 +574,11 @@ function ProductForm({ product, onSave, onCancel, isEdit }: {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Strap</label>
+            <label className="block text-sm font-semibold text-gray-900 mb-1">Strap</label>
             <select
               value={form.strap}
               onChange={(e) => setForm({ ...form, strap: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
             >
               <option>Leather</option>
               <option>Stainless Steel</option>
@@ -487,11 +588,11 @@ function ProductForm({ product, onSave, onCancel, isEdit }: {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Water Resistance</label>
+            <label className="block text-sm font-semibold text-gray-900 mb-1">Water Resistance</label>
             <select
               value={form.waterResistance}
               onChange={(e) => setForm({ ...form, waterResistance: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
             >
               <option>30m</option>
               <option>50m</option>
