@@ -39,6 +39,48 @@ export default function AdminPage() {
     setUsdtAddress(savedAddress || DEFAULT_USDT_ADDRESS);
   }, []);
 
+  // 同步浏览器历史记录 - 让返回按钮可用
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    
+    // 从 URL hash 读取视图状态
+    const hash = window.location.hash.slice(1);
+    if (hash && ["list", "edit", "add", "settings"].includes(hash)) {
+      setView(hash as any);
+    }
+  }, [isLoggedIn]);
+
+  // 当视图改变时更新 URL hash
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    
+    const newHash = view === "list" ? "" : view;
+    if (window.location.hash.slice(1) !== newHash) {
+      window.history.pushState(null, "", newHash ? `#${newHash}` : window.location.pathname);
+    }
+  }, [view, isLoggedIn]);
+
+  // 监听浏览器后退/前进按钮
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    
+    const handlePopState = () => {
+      const hash = window.location.hash.slice(1);
+      if (hash && ["list", "edit", "add", "settings"].includes(hash)) {
+        setView(hash as any);
+        if (hash !== "edit") {
+          setEditingProduct(null);
+        }
+      } else {
+        setView("list");
+        setEditingProduct(null);
+      }
+    };
+    
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [isLoggedIn]);
+
   // 登录处理
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
