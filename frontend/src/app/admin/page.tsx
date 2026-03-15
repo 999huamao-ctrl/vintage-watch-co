@@ -33,7 +33,7 @@ const ROLE_PERMISSIONS: Record<UserRole, { label: string; icon: any; permissions
   ADMIN: {
     label: "Administrator",
     icon: UserCircle,
-    permissions: ["products", "orders", "settings"],
+    permissions: ["products", "orders"],
   },
   SUPPLY: {
     label: "Supply Manager",
@@ -59,8 +59,15 @@ export default function AdminPage() {
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
-  const [usdtAddress, setUsdtAddress] = useState("");
-  const [usdtSaved, setUsdtSaved] = useState(false);
+  
+  // 3级钱包状态（仅SuperAdmin可设置）
+  const [walletConfig, setWalletConfig] = useState({
+    l1Receiving: "TGPBhfjSuwjrfGUtdqt6EZUbzhbRCGfC5c",
+    l2Operating: "TCWgr2qGcheRsD7kceoFpJfMg59fFrJGCq", 
+    l3Profit: "TUyTqV47pd7o3Bg6Uhw5XJ9rwkdgi6tsKb",
+  });
+  const [walletSaved, setWalletSaved] = useState(false);
+  
   const [activeTab, setActiveTab] = useState("products");
   
   // 用户管理状态（仅SuperAdmin）
@@ -89,8 +96,10 @@ export default function AdminPage() {
     if (saved) {
       setProducts(JSON.parse(saved));
     }
-    const savedAddress = localStorage.getItem("usdt_address");
-    setUsdtAddress(savedAddress || DEFAULT_USDT_ADDRESS);
+    const savedWallets = localStorage.getItem("wallet_config");
+    if (savedWallets) {
+      setWalletConfig(JSON.parse(savedWallets));
+    }
   }, []);
 
   // 同步浏览器历史记录
@@ -153,11 +162,11 @@ export default function AdminPage() {
     return ROLE_PERMISSIONS[currentUser.role].permissions.includes(permission);
   };
 
-  // 保存 USDT 地址
-  const saveUSDTAddress = () => {
-    localStorage.setItem("usdt_address", usdtAddress);
-    setUsdtSaved(true);
-    setTimeout(() => setUsdtSaved(false), 2000);
+  // 保存钱包配置
+  const saveWalletConfig = () => {
+    localStorage.setItem("wallet_config", JSON.stringify(walletConfig));
+    setWalletSaved(true);
+    setTimeout(() => setWalletSaved(false), 2000);
   };
 
   // 保存产品数据
@@ -569,9 +578,9 @@ export default function AdminPage() {
 
           {/* Settings */}
           {view === "settings" && hasPermission("settings") && (
-            <div className="max-w-2xl">
+            <div className="max-w-3xl">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-serif">Settings</h2>
+                <h2 className="text-2xl font-serif">Wallet Configuration</h2>
                 <button 
                   onClick={() => setView("list")} 
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -580,28 +589,86 @@ export default function AdminPage() {
                 </button>
               </div>
 
-              <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <Wallet className="w-6 h-6 text-amber-500" />
-                  <h3 className="text-lg font-semibold">Payment Settings</h3>
+              {/* 3级钱包架构 */}
+              <div className="space-y-6">
+                {/* L1 收款钱包 */}
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Wallet className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold">Level 1: Receiving Wallet</h3>
+                      <p className="text-sm text-gray-500">Customer payments come here</p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                      USDT Address (TRC20)
+                    </label>
+                    <textarea
+                      value={walletConfig.l1Receiving}
+                      onChange={(e) => setWalletConfig({...walletConfig, l1Receiving: e.target.value})}
+                      placeholder="Enter TRC20 receiving address"
+                      rows={2}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm text-gray-900"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    USDT Receiving Address (TRC20)
-                  </label>
-                  <textarea
-                    value={usdtAddress}
-                    onChange={(e) => setUsdtAddress(e.target.value)}
-                    placeholder="Enter your TRC20 USDT address"
-                    rows={3}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-mono text-sm text-gray-900"
-                  />
+                {/* L2 运营钱包 */}
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                      <Wallet className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold">Level 2: Operating Wallet</h3>
+                      <p className="text-sm text-gray-500">40% for ads, logistics, operations</p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                      USDT Address (TRC20)
+                    </label>
+                    <textarea
+                      value={walletConfig.l2Operating}
+                      onChange={(e) => setWalletConfig({...walletConfig, l2Operating: e.target.value})}
+                      placeholder="Enter TRC20 operating address"
+                      rows={2}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-mono text-sm text-gray-900"
+                    />
+                  </div>
+                </div>
+
+                {/* L3 利润钱包 */}
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                      <Wallet className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold">Level 3: Profit Wallet</h3>
+                      <p className="text-sm text-gray-500">60% profit - STAR&apos;s wallet</p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                      USDT Address (TRC20)
+                    </label>
+                    <textarea
+                      value={walletConfig.l3Profit}
+                      onChange={(e) => setWalletConfig({...walletConfig, l3Profit: e.target.value})}
+                      placeholder="Enter TRC20 profit address"
+                      rows={2}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 font-mono text-sm text-gray-900"
+                    />
+                  </div>
                 </div>
 
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                   <p className="text-sm text-amber-800">
-                    <strong>Important:</strong> Only use TRC20 (Tron) network addresses.
+                    <strong>Fund Flow:</strong> L1 receives → 40% to L2 (operations) → 60% to L3 (profit)
                   </p>
                 </div>
 
@@ -613,11 +680,11 @@ export default function AdminPage() {
                     Cancel
                   </button>
                   <button
-                    onClick={saveUSDTAddress}
+                    onClick={saveWalletConfig}
                     className="flex-1 px-4 py-2.5 bg-stone-900 text-white rounded-xl hover:bg-stone-800 transition-colors flex items-center justify-center gap-2"
                   >
                     <Save className="w-4 h-4" />
-                    {usdtSaved ? "Saved!" : "Save"}
+                    {walletSaved ? "Saved!" : "Save Configuration"}
                   </button>
                 </div>
               </div>

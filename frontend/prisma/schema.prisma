@@ -7,205 +7,120 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ==================== 用户与权限 ====================
-
+// 用户系统
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  password      String    // hashed
-  role          Role      @default(CUSTOMER)
-  language      String    @default("en")
-  country       String?
-  
-  // Relations
-  orders        Order[]
-  sessions      Session[]
-  cartItems     CartItem[]
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-}
-
-model Session {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token     String   @unique
-  expiresAt DateTime
-  
-  createdAt DateTime @default(now())
-}
-
-enum Role {
-  SUPERADMIN    // 超级管理员：全权限
-  ADMIN         // 管理员：运营+商品
-  SUPPLY        // 供应链：商品+库存
-  LOGISTICS     // 物流：订单+发货
-  CUSTOMER      // 客户
-}
-
-// ==================== 商品管理 ====================
-
-model Category {
   id          String    @id @default(uuid())
-  name        String    @unique
-  slug        String    @unique
-  sortOrder   Int       @default(0)
-  isActive    Boolean   @default(true)
-  
-  products    Product[]
-  
+  username    String    @unique
+  email       String    @unique
+  password    String    // hashed
+  role        UserRole  @default(CUSTOMER)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-}
-
-model Product {
-  id              String    @id @default(uuid())
-  slug            String    @unique
-  sku             String    @unique
-  
-  // Base Info
-  baseName        String
-  baseDesc        String
-  price           Decimal   @db.Decimal(10, 2)
-  comparePrice    Decimal?  @db.Decimal(10, 2)
-  costPrice       Decimal?  @db.Decimal(10, 2)  // 成本价（供应链）
-  
-  // Inventory
-  stock           Int       @default(0)
-  lowStockAlert   Int       @default(5)
-  
-  // Media
-  images          String[]
+  lastLoginAt DateTime?
+  isActive    Boolean   @default(true)
   
   // Relations
-  categoryId      String
-  category        Category  @relation(fields: [categoryId], references: [id])
+  orders      Order[]
+  activities  UserActivity[]
   
-  translations    ProductTranslation[]
-  orderItems      OrderItem[]
-  cartItems       CartItem[]
-  inventoryLogs   InventoryLog[]
-  supplierItems   SupplierProduct[]
-  
-  // Status
-  isActive        Boolean   @default(true)
-  isFeatured      Boolean   @default(false)  // 首页推荐
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  @@map("users")
 }
 
-model ProductTranslation {
-  id          String   @id @default(uuid())
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  language    String   // en, de, fr, es, it, zh
-  name        String
-  description String
-  
-  @@unique([productId, language])
+enum UserRole {
+  SUPERADMIN
+  ADMIN
+  SUPPLY
+  LOGISTICS
+  CUSTOMER
 }
 
-// ==================== 购物车 ====================
-
-model CartItem {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  quantity  Int
+// 商品系统
+model Product {
+  id            String   @id @default(uuid())
+  name          String
+  nameZh        String?  // 中文名称
+  nameDe        String?  // 德语名称
+  nameFr        String?  // 法语名称
+  nameEs        String?  // 西班牙语名称
+  nameIt        String?  // 意大利语名称
+  nameJa        String?  // 日语名称
+  price         Decimal  @db.Decimal(10, 2)
+  originalPrice Decimal? @db.Decimal(10, 2)
+  category      String
+  description   String   @db.Text
+  descriptionZh String?  @db.Text
+  image         String
+  images        String[] // 多图
+  stock         Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
   
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // 规格
+  caseSize      String?
+  movement      String?
+  strap         String?
+  waterResistance String?
   
-  @@unique([userId, productId])
+  // Relations
+  orderItems    OrderItem[]
+  inventoryLogs InventoryLog[]
+  
+  @@map("products")
 }
 
-// ==================== 订单系统 ====================
-
+// 订单系统
 model Order {
   id              String      @id @default(uuid())
-  orderNumber     String      @unique  // ORD-20240315-XXXX
+  orderNumber     String      @unique
+  status          OrderStatus @default(PENDING)
   
-  // Customer
-  userId          String?
-  user            User?       @relation(fields: [userId], references: [id])
-  
-  // Guest checkout info
-  customerEmail   String
+  // 客户信息
   customerName    String
+  customerEmail   String
   customerPhone   String?
-  customerAddress String
-  customerCity    String
-  customerPostal  String
-  customerCountry String
   
-  // Financial
-  subtotal        Decimal     @db.Decimal(10, 2)
-  shipping        Decimal     @db.Decimal(10, 2)
-  discount        Decimal?    @db.Decimal(10, 2)
-  total           Decimal     @db.Decimal(10, 2)
-  currency        String      @default("EUR")
+  // 收货地址
+  shippingAddress String
+  shippingCity    String
+  shippingZip     String
+  shippingCountry String
   
-  // Payment
-  paymentMethod   PaymentMethod
+  // 支付信息
+  paymentMethod   String      @default("USDT")
   paymentStatus   PaymentStatus @default(PENDING)
-  txid            String?       // USDT transaction ID
-  paidAt          DateTime?
+  paymentTxHash   String?     // USDT交易哈希
   
-  // Shipping
-  status          OrderStatus   @default(PENDING)
+  // 金额
+  subtotal        Decimal     @db.Decimal(10, 2)
+  shippingCost    Decimal     @default(0) @db.Decimal(10, 2)
+  discount        Decimal     @default(0) @db.Decimal(10, 2)
+  total           Decimal     @db.Decimal(10, 2)
+  
+  // 物流
   trackingNumber  String?
-  carrier         String?       // 物流承运商
+  carrier         String?
   shippedAt       DateTime?
   deliveredAt     DateTime?
   
-  // Relations
-  items           OrderItem[]
-  statusHistory   OrderStatusHistory[]
-  
-  // Attribution (for marketing)
-  utmSource       String?       // 流量来源
+  // UTM归因
+  utmSource       String?
   utmMedium       String?
   utmCampaign     String?
   
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  // Relations
+  userId          String?
+  user            User?       @relation(fields: [userId], references: [id])
+  items           OrderItem[]
   
-  @@index([status, createdAt])
-  @@index([paymentStatus])
-  @@index([customerEmail])
-}
-
-model OrderItem {
-  id          String   @id @default(uuid())
-  orderId     String
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
   
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id])
-  
-  name        String   // 快照名称（防止商品后续修改）
-  price       Decimal  @db.Decimal(10, 2)
-  costPrice   Decimal? @db.Decimal(10, 2)  // 用于利润计算
-  quantity    Int
-}
-
-model OrderStatusHistory {
-  id          String      @id @default(uuid())
-  orderId     String
-  order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  status      OrderStatus
-  note        String?
-  
-  createdAt   DateTime    @default(now())
+  @@map("orders")
 }
 
 enum OrderStatus {
-  PENDING       // 待付款
-  PAID          // 已付款
+  PENDING       // 待处理
   CONFIRMED     // 已确认
   PROCESSING    // 处理中
   SHIPPED       // 已发货
@@ -221,221 +136,146 @@ enum PaymentStatus {
   REFUNDED
 }
 
-enum PaymentMethod {
-  USDT
-  PAYPAL
-  CREDIT_CARD
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2)
+  
+  @@map("order_items")
 }
 
-// ==================== 供应链 ====================
-
+// 供应商管理
 model Supplier {
   id          String    @id @default(uuid())
   name        String
-  code        String    @unique  // 供应商编码
-  contact     String?
+  contactName String?
   email       String?
   phone       String?
   address     String?
-  
-  // Relations
-  products    SupplierProduct[]
-  purchases   PurchaseOrder[]
-  
+  notes       String?
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  
+  purchaseOrders PurchaseOrder[]
+  
+  @@map("suppliers")
 }
 
-model SupplierProduct {
-  id          String    @id @default(uuid())
-  supplierId  String
-  supplier    Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  
-  productId   String
-  product     Product   @relation(fields: [productId], references: [id])
-  
-  supplierSku String?   // 供应商自己的SKU
-  costPrice   Decimal   @db.Decimal(10, 2)
-  minOrderQty Int       @default(1)
-  leadTime    Int?      // 供货周期（天）
-  
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  
-  @@unique([supplierId, productId])
-}
-
+// 采购单
 model PurchaseOrder {
-  id              String              @id @default(uuid())
-  poNumber        String              @unique  // PO-20240315-XXXX
+  id           String    @id @default(uuid())
+  poNumber     String    @unique
+  supplierId   String
+  supplier     Supplier  @relation(fields: [supplierId], references: [id])
+  status       POStatus  @default(DRAFT)
+  totalAmount  Decimal   @db.Decimal(10, 2)
+  notes        String?
+  createdAt    DateTime  @default(now())
+  receivedAt   DateTime?
   
-  supplierId      String
-  supplier        Supplier            @relation(fields: [supplierId], references: [id])
+  items        PurchaseOrderItem[]
   
-  status          PurchaseStatus      @default(DRAFT)
-  totalAmount     Decimal             @db.Decimal(10, 2)
-  
-  // Shipping
-  shippingMethod  String?
-  trackingNumber  String?
-  
-  // Timeline
-  orderedAt       DateTime?
-  receivedAt      DateTime?
-  
-  items           PurchaseOrderItem[]
-  
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  @@map("purchase_orders")
 }
 
-model PurchaseOrderItem {
-  id              String        @id @default(uuid())
-  purchaseOrderId String
-  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
-  
-  productId       String
-  quantity        Int
-  unitPrice       Decimal       @db.Decimal(10, 2)
-  receivedQty     Int           @default(0)
-  
-  createdAt       DateTime      @default(now())
-}
-
-model InventoryLog {
-  id          String          @id @default(uuid())
-  productId   String
-  product     Product         @relation(fields: [productId], references: [id])
-  
-  type        InventoryType
-  quantity    Int             // 正数=入库，负数=出库
-  reason      String?
-  
-  referenceId String?         // 关联订单号或采购单号
-  
-  createdAt   DateTime        @default(now())
-}
-
-enum PurchaseStatus {
+enum POStatus {
   DRAFT
-  SENT        // 已发送给供应商
-  CONFIRMED   // 供应商已确认
-  SHIPPED     // 供应商已发货
-  RECEIVED    // 已收货
+  SENT
+  CONFIRMED
+  SHIPPED
+  RECEIVED
   CANCELLED
 }
 
-enum InventoryType {
-  PURCHASE    // 采购入库
-  SALE        // 销售出库
-  RETURN      // 退货入库
-  ADJUSTMENT  // 库存调整
-  STOCKTAKE   // 盘点
+model PurchaseOrderItem {
+  id          String        @id @default(uuid())
+  poId        String
+  po          PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  productName String
+  quantity    Int
+  unitPrice   Decimal       @db.Decimal(10, 2)
+  totalPrice  Decimal       @db.Decimal(10, 2)
+  
+  @@map("purchase_order_items")
 }
 
-// ==================== 运营数据 ====================
-
-model MarketingCampaign {
-  id          String    @id @default(uuid())
-  name        String
-  utmSource   String    // facebook, google, tiktok
-  utmMedium   String    // cpc, social, email
-  utmCampaign String    // 活动名称
+// 库存流水
+model InventoryLog {
+  id          String   @id @default(uuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  type        String   // IN (入库), OUT (出库), ADJUST (调整)
+  quantity    Int
+  reason      String   // purchase, sale, return, adjustment
+  referenceId String?  // 关联订单ID或采购单ID
+  note        String?
+  createdAt   DateTime @default(now())
   
-  budget      Decimal   @db.Decimal(10, 2)
+  @@map("inventory_logs")
+}
+
+// 广告活动
+model AdCampaign {
+  id          String   @id @default(uuid())
+  name        String
+  platform    String   // facebook, google, tiktok
+  status      String   // active, paused, ended
+  budget      Decimal  @db.Decimal(10, 2)
+  spend       Decimal  @default(0) @db.Decimal(10, 2)
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  conversions Int      @default(0)
   startDate   DateTime
   endDate     DateTime?
-  
-  // Metrics
-  impressions Int       @default(0)
-  clicks      Int       @default(0)
-  spend       Decimal   @db.Decimal(10, 2) @default(0)
-  
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model DailyStats {
-  id              String    @id @default(uuid())
-  date            DateTime  @unique @db.Date
-  
-  // Traffic
-  visitors        Int       @default(0)
-  pageViews       Int       @default(0)
-  
-  // Sales
-  orders          Int       @default(0)
-  revenue         Decimal   @db.Decimal(10, 2) @default(0)
-  
-  // Marketing
-  adSpend         Decimal   @db.Decimal(10, 2) @default(0)
-  
-  // Calculated fields (for quick reporting)
-  conversionRate  Decimal?  @db.Decimal(5, 2)  // 转化率 %
-  aov             Decimal?  @db.Decimal(10, 2) // 客单价
-  roas            Decimal?  @db.Decimal(5, 2)  // 广告回报率
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-}
-
-// ==================== 客户行为 ====================
-
-model CustomerBehavior {
-  id          String    @id @default(uuid())
-  
-  // Anonymous or logged in
-  userId      String?
-  sessionId   String    // 用于追踪匿名用户
-  
-  // Event
-  eventType   String    // view_product, add_cart, purchase, etc.
-  productId   String?
-  
-  // Metadata
-  url         String?
-  referrer    String?
-  ipAddress   String?
-  userAgent   String?
-  country     String?
-  
-  // UTM
-  utmSource   String?
-  utmMedium   String?
   utmCampaign String?
+  createdAt   DateTime @default(now())
   
-  createdAt   DateTime  @default(now())
-  
-  @@index([eventType, createdAt])
-  @@index([userId])
-  @@index([sessionId])
+  @@map("ad_campaigns")
 }
 
-// ==================== 系统配置 ====================
-
-model SystemConfig {
-  id          String    @id @default(uuid())
-  key         String    @unique
-  value       String
-  description String?
+// 运营日报
+model DailyReport {
+  id          String   @id @default(uuid())
+  date        DateTime @unique
+  revenue     Decimal  @db.Decimal(10, 2)
+  orders      Int
+  visitors    Int
+  adSpend     Decimal  @db.Decimal(10, 2)
+  newCustomers Int
+  note        String?
+  createdAt   DateTime @default(now())
   
-  updatedAt   DateTime  @updatedAt
+  @@map("daily_reports")
 }
 
-model AuditLog {
-  id          String    @id @default(uuid())
-  userId      String?
-  action      String    // create_order, update_product, etc.
-  entityType  String    // Order, Product, etc.
-  entityId    String?
-  oldValue    String?   // JSON
-  newValue    String?   // JSON
-  ipAddress   String?
+// 用户行为追踪
+model UserActivity {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  sessionId String
+  action    String   // view_product, add_cart, checkout_start, purchase
+  productId String?
+  metadata  Json?    // 额外数据
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
   
-  createdAt   DateTime  @default(now())
+  @@map("user_activities")
+}
+
+// 钱包配置
+model WalletConfig {
+  id          String   @id @default(uuid())
+  l1Receiving String   // 收款钱包
+  l2Operating String   // 运营钱包
+  l3Profit    String   // 利润钱包
+  updatedAt   DateTime @updatedAt
+  updatedBy   String
   
-  @@index([entityType, entityId])
-  @@index([createdAt])
+  @@map("wallet_config")
 }

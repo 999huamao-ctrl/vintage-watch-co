@@ -1,4 +1,5 @@
-import { prisma } from './db';
+// 本地商品数据备份（数据库不可用时使用）
+// import { prisma } from './db'; // 数据库部署后恢复
 
 // 本地商品数据备份（数据库不可用时使用）
 export const localProducts = [
@@ -228,38 +229,20 @@ export const localProducts = [
   },
 ];
 
-// 获取所有商品（优先数据库，失败时用本地数据）
+// 获取所有商品（当前使用本地数据，数据库部署后恢复数据库查询）
 export async function getProductsWithFallback(options?: {
   category?: string;
   language?: string;
   isActive?: boolean;
   isFeatured?: boolean;
 }) {
-  try {
-    // 尝试从数据库获取
-    const dbProducts = await prisma.product.findMany({
-      where: {
-        ...(options?.category && { category: { slug: options.category } }),
-        ...(options?.isActive !== undefined && { isActive: options.isActive }),
-        ...(options?.isFeatured && { isFeatured: true }),
-      },
-      include: {
-        category: true,
-        translations: options?.language ? { where: { language: options.language } } : true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    
-    if (dbProducts.length > 0) {
-      return dbProducts.map(p => ({
-        ...p,
-        name: p.translations?.[0]?.name || p.baseName,
-        description: p.translations?.[0]?.description || p.baseDesc,
-      }));
-    }
-  } catch (error) {
-    console.log('Database fetch failed, using local data:', error);
-  }
+  // 数据库部署后启用以下代码：
+  // try {
+  //   const dbProducts = await prisma.product.findMany({...});
+  //   if (dbProducts.length > 0) return dbProducts;
+  // } catch (error) {
+  //   console.log('Database fetch failed, using local data:', error);
+  // }
   
   // 返回本地数据
   let products = localProducts;
@@ -280,25 +263,13 @@ export async function getProductsWithFallback(options?: {
 
 // 获取单个商品
 export async function getProductBySlugWithFallback(slug: string, language?: string) {
-  try {
-    const product = await prisma.product.findUnique({
-      where: { slug },
-      include: {
-        category: true,
-        translations: language ? { where: { language } } : true,
-      },
-    });
-    
-    if (product) {
-      return {
-        ...product,
-        name: product.translations?.[0]?.name || product.baseName,
-        description: product.translations?.[0]?.description || product.baseDesc,
-      };
-    }
-  } catch (error) {
-    console.log('Database fetch failed, using local data:', error);
-  }
+  // 数据库部署后启用以下代码：
+  // try {
+  //   const product = await prisma.product.findUnique({...});
+  //   if (product) return product;
+  // } catch (error) {
+  //   console.log('Database fetch failed, using local data:', error);
+  // }
   
   const localProduct = localProducts.find(p => p.slug === slug);
   if (localProduct) {
