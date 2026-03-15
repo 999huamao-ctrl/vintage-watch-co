@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://horizon-watch-store-1773050228.surge.sh/sitemap.xml

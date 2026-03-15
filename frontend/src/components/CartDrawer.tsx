@@ -1,6 +1,7 @@
 "use client";
 
 import { useCart } from "@/lib/cart";
+import { useLanguage } from "@/lib/language";
 import Link from "next/link";
 import { freeShippingThreshold } from "@/lib/data";
 
@@ -10,6 +11,7 @@ interface CartDrawerProps {
 }
 
 export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
+  const { t } = useLanguage();
   const { items, removeItem, updateQuantity, getTotalPrice, clearCart } = useCart();
   const subtotal = getTotalPrice();
   const remainingForFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
@@ -27,7 +29,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
       {/* Drawer */}
       <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col">
         <div className="p-6 border-b border-stone-200 flex items-center justify-between">
-          <h2 className="text-xl font-serif">Your Cart ({items.length})</h2>
+          <h2 className="text-xl font-serif">{t('cart.yourCart')} ({items.length})</h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-stone-100 rounded-lg transition-colors"
@@ -41,12 +43,12 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         <div className="flex-1 overflow-y-auto p-6">
           {items.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-stone-500 mb-4">Your cart is empty</p>
+              <p className="text-stone-700 mb-4">{t('cart.empty')}</p>
               <button
                 onClick={onClose}
                 className="text-amber-700 hover:underline"
               >
-                Continue Shopping
+                {t('cart.continueShopping')}
               </button>
             </div>
           ) : (
@@ -54,14 +56,14 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
               {items.map((item) => (
                 <div key={item.product.id} className="flex gap-4">
                   <div className="w-20 h-20 bg-stone-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-10 h-10 text-stone-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+                    <svg className="w-10 h-10 text-stone-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
                       <circle cx="12" cy="12" r="10" />
                     </svg>
                   </div>
                   
                   <div className="flex-1">
                     <h3 className="font-medium">{item.product.name}</h3>
-                    <p className="text-stone-600">€{item.product.price}</p>
+                    <p className="text-stone-800">€{item.product.price}</p>
                     
                     <div className="flex items-center gap-3 mt-2">
                       <div className="flex items-center border border-stone-300 rounded-lg">
@@ -84,7 +86,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                         onClick={() => removeItem(item.product.id)}
                         className="text-red-500 hover:text-red-700 text-sm"
                       >
-                        Remove
+                        {t('cart.remove')}
                       </button>
                     </div>
                   </div>
@@ -97,17 +99,17 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         {items.length > 0 && (
           <div className="p-6 border-t border-stone-200 bg-stone-50">
             {remainingForFreeShipping > 0 ? (
-              <p className="text-sm text-stone-600 mb-4">
-                Add €{remainingForFreeShipping} more for free shipping!
+              <p className="text-sm text-stone-800 mb-4">
+                {t('cart.addMoreForFreeShipping').replace('{amount}', remainingForFreeShipping.toFixed(0))}
               </p>
             ) : (
               <p className="text-sm text-green-600 mb-4">
-                ✓ You qualify for free shipping!
+                ✓ {t('cart.freeShippingQualified')}
               </p>
             )}
             
             <div className="flex items-center justify-between mb-4">
-              <span className="text-lg font-semibold">Subtotal</span>
+              <span className="text-lg font-semibold">{t('cart.subtotal')}</span>
               <span className="text-xl font-semibold">€{subtotal.toFixed(2)}</span>
             </div>
             
@@ -116,14 +118,14 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
               onClick={onClose}
               className="block w-full bg-stone-900 text-white text-center py-3 rounded-lg hover:bg-stone-800 transition-colors font-medium"
             >
-              Proceed to Checkout
+              {t('cart.proceedToCheckout')}
             </Link>
             
             <button
               onClick={clearCart}
-              className="block w-full text-center text-stone-500 hover:text-stone-700 mt-3 text-sm"
+              className="block w-full text-center text-stone-700 hover:text-stone-700 mt-3 text-sm"
             >
-              Clear Cart
+              {t('cart.clearCart')}
             </button>
           </div>
         )}

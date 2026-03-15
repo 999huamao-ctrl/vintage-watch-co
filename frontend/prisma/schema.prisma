@@ -1,0 +1,441 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== 用户与权限 ====================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String    // hashed
+  role          Role      @default(CUSTOMER)
+  language      String    @default("en")
+  country       String?
+  
+  // Relations
+  orders        Order[]
+  sessions      Session[]
+  cartItems     CartItem[]
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  
+  createdAt DateTime @default(now())
+}
+
+enum Role {
+  SUPERADMIN    // 超级管理员：全权限
+  ADMIN         // 管理员：运营+商品
+  SUPPLY        // 供应链：商品+库存
+  LOGISTICS     // 物流：订单+发货
+  CUSTOMER      // 客户
+}
+
+// ==================== 商品管理 ====================
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  slug        String    @unique
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  
+  products    Product[]
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  id              String    @id @default(uuid())
+  slug            String    @unique
+  sku             String    @unique
+  
+  // Base Info
+  baseName        String
+  baseDesc        String
+  price           Decimal   @db.Decimal(10, 2)
+  comparePrice    Decimal?  @db.Decimal(10, 2)
+  costPrice       Decimal?  @db.Decimal(10, 2)  // 成本价（供应链）
+  
+  // Inventory
+  stock           Int       @default(0)
+  lowStockAlert   Int       @default(5)
+  
+  // Media
+  images          String[]
+  
+  // Relations
+  categoryId      String
+  category        Category  @relation(fields: [categoryId], references: [id])
+  
+  translations    ProductTranslation[]
+  orderItems      OrderItem[]
+  cartItems       CartItem[]
+  inventoryLogs   InventoryLog[]
+  supplierItems   SupplierProduct[]
+  
+  // Status
+  isActive        Boolean   @default(true)
+  isFeatured      Boolean   @default(false)  // 首页推荐
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model ProductTranslation {
+  id          String   @id @default(uuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  language    String   // en, de, fr, es, it, zh
+  name        String
+  description String
+  
+  @@unique([productId, language])
+}
+
+// ==================== 购物车 ====================
+
+model CartItem {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([userId, productId])
+}
+
+// ==================== 订单系统 ====================
+
+model Order {
+  id              String      @id @default(uuid())
+  orderNumber     String      @unique  // ORD-20240315-XXXX
+  
+  // Customer
+  userId          String?
+  user            User?       @relation(fields: [userId], references: [id])
+  
+  // Guest checkout info
+  customerEmail   String
+  customerName    String
+  customerPhone   String?
+  customerAddress String
+  customerCity    String
+  customerPostal  String
+  customerCountry String
+  
+  // Financial
+  subtotal        Decimal     @db.Decimal(10, 2)
+  shipping        Decimal     @db.Decimal(10, 2)
+  discount        Decimal?    @db.Decimal(10, 2)
+  total           Decimal     @db.Decimal(10, 2)
+  currency        String      @default("EUR")
+  
+  // Payment
+  paymentMethod   PaymentMethod
+  paymentStatus   PaymentStatus @default(PENDING)
+  txid            String?       // USDT transaction ID
+  paidAt          DateTime?
+  
+  // Shipping
+  status          OrderStatus   @default(PENDING)
+  trackingNumber  String?
+  carrier         String?       // 物流承运商
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
+  
+  // Relations
+  items           OrderItem[]
+  statusHistory   OrderStatusHistory[]
+  
+  // Attribution (for marketing)
+  utmSource       String?       // 流量来源
+  utmMedium       String?
+  utmCampaign     String?
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@index([status, createdAt])
+  @@index([paymentStatus])
+  @@index([customerEmail])
+}
+
+model OrderItem {
+  id          String   @id @default(uuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  
+  name        String   // 快照名称（防止商品后续修改）
+  price       Decimal  @db.Decimal(10, 2)
+  costPrice   Decimal? @db.Decimal(10, 2)  // 用于利润计算
+  quantity    Int
+}
+
+model OrderStatusHistory {
+  id          String      @id @default(uuid())
+  orderId     String
+  order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status      OrderStatus
+  note        String?
+  
+  createdAt   DateTime    @default(now())
+}
+
+enum OrderStatus {
+  PENDING       // 待付款
+  PAID          // 已付款
+  CONFIRMED     // 已确认
+  PROCESSING    // 处理中
+  SHIPPED       // 已发货
+  DELIVERED     // 已送达
+  CANCELLED     // 已取消
+  REFUNDED      // 已退款
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  USDT
+  PAYPAL
+  CREDIT_CARD
+}
+
+// ==================== 供应链 ====================
+
+model Supplier {
+  id          String    @id @default(uuid())
+  name        String
+  code        String    @unique  // 供应商编码
+  contact     String?
+  email       String?
+  phone       String?
+  address     String?
+  
+  // Relations
+  products    SupplierProduct[]
+  purchases   PurchaseOrder[]
+  
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model SupplierProduct {
+  id          String    @id @default(uuid())
+  supplierId  String
+  supplier    Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id])
+  
+  supplierSku String?   // 供应商自己的SKU
+  costPrice   Decimal   @db.Decimal(10, 2)
+  minOrderQty Int       @default(1)
+  leadTime    Int?      // 供货周期（天）
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@unique([supplierId, productId])
+}
+
+model PurchaseOrder {
+  id              String              @id @default(uuid())
+  poNumber        String              @unique  // PO-20240315-XXXX
+  
+  supplierId      String
+  supplier        Supplier            @relation(fields: [supplierId], references: [id])
+  
+  status          PurchaseStatus      @default(DRAFT)
+  totalAmount     Decimal             @db.Decimal(10, 2)
+  
+  // Shipping
+  shippingMethod  String?
+  trackingNumber  String?
+  
+  // Timeline
+  orderedAt       DateTime?
+  receivedAt      DateTime?
+  
+  items           PurchaseOrderItem[]
+  
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(uuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  
+  productId       String
+  quantity        Int
+  unitPrice       Decimal       @db.Decimal(10, 2)
+  receivedQty     Int           @default(0)
+  
+  createdAt       DateTime      @default(now())
+}
+
+model InventoryLog {
+  id          String          @id @default(uuid())
+  productId   String
+  product     Product         @relation(fields: [productId], references: [id])
+  
+  type        InventoryType
+  quantity    Int             // 正数=入库，负数=出库
+  reason      String?
+  
+  referenceId String?         // 关联订单号或采购单号
+  
+  createdAt   DateTime        @default(now())
+}
+
+enum PurchaseStatus {
+  DRAFT
+  SENT        // 已发送给供应商
+  CONFIRMED   // 供应商已确认
+  SHIPPED     // 供应商已发货
+  RECEIVED    // 已收货
+  CANCELLED
+}
+
+enum InventoryType {
+  PURCHASE    // 采购入库
+  SALE        // 销售出库
+  RETURN      // 退货入库
+  ADJUSTMENT  // 库存调整
+  STOCKTAKE   // 盘点
+}
+
+// ==================== 运营数据 ====================
+
+model MarketingCampaign {
+  id          String    @id @default(uuid())
+  name        String
+  utmSource   String    // facebook, google, tiktok
+  utmMedium   String    // cpc, social, email
+  utmCampaign String    // 活动名称
+  
+  budget      Decimal   @db.Decimal(10, 2)
+  startDate   DateTime
+  endDate     DateTime?
+  
+  // Metrics
+  impressions Int       @default(0)
+  clicks      Int       @default(0)
+  spend       Decimal   @db.Decimal(10, 2) @default(0)
+  
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model DailyStats {
+  id              String    @id @default(uuid())
+  date            DateTime  @unique @db.Date
+  
+  // Traffic
+  visitors        Int       @default(0)
+  pageViews       Int       @default(0)
+  
+  // Sales
+  orders          Int       @default(0)
+  revenue         Decimal   @db.Decimal(10, 2) @default(0)
+  
+  // Marketing
+  adSpend         Decimal   @db.Decimal(10, 2) @default(0)
+  
+  // Calculated fields (for quick reporting)
+  conversionRate  Decimal?  @db.Decimal(5, 2)  // 转化率 %
+  aov             Decimal?  @db.Decimal(10, 2) // 客单价
+  roas            Decimal?  @db.Decimal(5, 2)  // 广告回报率
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// ==================== 客户行为 ====================
+
+model CustomerBehavior {
+  id          String    @id @default(uuid())
+  
+  // Anonymous or logged in
+  userId      String?
+  sessionId   String    // 用于追踪匿名用户
+  
+  // Event
+  eventType   String    // view_product, add_cart, purchase, etc.
+  productId   String?
+  
+  // Metadata
+  url         String?
+  referrer    String?
+  ipAddress   String?
+  userAgent   String?
+  country     String?
+  
+  // UTM
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  
+  createdAt   DateTime  @default(now())
+  
+  @@index([eventType, createdAt])
+  @@index([userId])
+  @@index([sessionId])
+}
+
+// ==================== 系统配置 ====================
+
+model SystemConfig {
+  id          String    @id @default(uuid())
+  key         String    @unique
+  value       String
+  description String?
+  
+  updatedAt   DateTime  @updatedAt
+}
+
+model AuditLog {
+  id          String    @id @default(uuid())
+  userId      String?
+  action      String    // create_order, update_product, etc.
+  entityType  String    // Order, Product, etc.
+  entityId    String?
+  oldValue    String?   // JSON
+  newValue    String?   // JSON
+  ipAddress   String?
+  
+  createdAt   DateTime  @default(now())
+  
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}

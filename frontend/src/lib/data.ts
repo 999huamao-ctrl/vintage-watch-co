@@ -3,7 +3,9 @@ export interface Product {
   name: string;
   description: string;
   price: number;
+  originalPrice?: number;
   image: string;
+  images: string[];
   category: string;
   specs: {
     caseSize: string;
@@ -11,420 +13,344 @@ export interface Product {
     strap: string;
     waterResistance: string;
     crystal: string;
+    caseMaterial: string;
   };
   inStock: boolean;
-  badge?: string; // Optional badge like "New", "Bestseller", "Sale"
+  stock: number;
+  badge?: string;
 }
 
 export const products: Product[] = [
-  // Heritage Collection - Classic Dress Watches
   {
-    id: "heritage-42",
-    name: "The Heritage 42",
-    description: "A timeless vintage dress watch featuring a 42mm case, automatic movement, and genuine leather strap. Perfect for the modern gentleman.",
-    price: 79,
-    image: "https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=600&h=600&fit=crop",
-    category: "Heritage Collection",
-    specs: { caseSize: "42mm", movement: "Automatic", strap: "Genuine Leather", waterResistance: "3ATM", crystal: "Mineral" },
+    id: "daytona-black",
+    name: "Daytona Black Steel",
+    description: "Iconic chronograph with 4131 automatic movement. 904L stainless steel case, sapphire crystal, 100m water resistance. The ultimate racing chronograph.",
+    price: 1350,
+    originalPrice: 3500,
+    image: "/products/laoli/image1.webp",
+    images: ["/products/laoli/image1.webp", "/products/laoli/image2.jpeg", "/products/laoli/image3.jpeg"],
+    category: "Men",
+    specs: {
+      caseSize: "40mm",
+      movement: "4131 Automatic",
+      strap: "904L Stainless Steel",
+      waterResistance: "100M",
+      crystal: "Sapphire",
+      caseMaterial: "904L Steel"
+    },
     inStock: true,
+    stock: 50,
+    badge: "Hot"
+  },
+  {
+    id: "submariner-black",
+    name: "Submariner Black",
+    description: "Legendary dive watch with 3235 automatic movement. 300m water resistance, ceramic bezel, date function. The reference among divers' watches.",
+    price: 1165,
+    originalPrice: 2500,
+    image: "/products/laoli/image4.jpeg",
+    images: ["/products/laoli/image4.jpeg", "/products/laoli/image5.jpeg", "/products/laoli/image6.webp"],
+    category: "Men",
+    specs: {
+      caseSize: "41mm",
+      movement: "3235 Automatic",
+      strap: "904L Stainless Steel",
+      waterResistance: "300M",
+      crystal: "Sapphire",
+      caseMaterial: "904L Steel"
+    },
+    inStock: true,
+    stock: 50,
     badge: "Bestseller"
   },
   {
-    id: "heritage-38",
-    name: "The Heritage 38",
-    description: "Elegant 38mm dress watch with automatic movement. A refined choice for those who prefer subtle sophistication.",
-    price: 69,
-    image: "/products/heritage-38.jpg",
-    category: "Heritage Collection",
-    specs: { caseSize: "38mm", movement: "Automatic", strap: "Genuine Leather", waterResistance: "3ATM", crystal: "Mineral" },
-    inStock: true
-  },
-  {
-    id: "heritage-40",
-    name: "The Heritage 40",
-    description: "Classic 40mm automatic watch with Roman numerals. The perfect balance of tradition and contemporary style.",
-    price: 75,
-    image: "/products/heritage-40.jpg",
-    category: "Heritage Collection",
-    specs: { caseSize: "40mm", movement: "Automatic", strap: "Genuine Leather", waterResistance: "3ATM", crystal: "Mineral" },
-    inStock: true
-  },
-  {
-    id: "heritage-slim",
-    name: "The Heritage Slim",
-    description: "Ultra-thin 38mm dress watch with Swiss quartz movement. Slips effortlessly under any cuff.",
-    price: 59,
-    image: "/products/heritage-slim.jpg",
-    category: "Heritage Collection",
-    specs: { caseSize: "38mm", movement: "Swiss Quartz", strap: "Genuine Leather", waterResistance: "3ATM", crystal: "Mineral" },
-    inStock: true
-  },
-  {
-    id: "heritage-gold",
-    name: "The Heritage Gold",
-    description: "Luxurious gold-tone dress watch with automatic movement. For those special occasions that demand elegance.",
-    price: 89,
-    image: "/products/heritage-gold.jpg",
-    category: "Heritage Collection",
-    specs: { caseSize: "40mm", movement: "Automatic", strap: "Brown Leather", waterResistance: "3ATM", crystal: "Mineral" },
+    id: "submariner-green",
+    name: "Submariner Green",
+    description: "Stunning green bezel and dial with 3235 automatic movement. 300m water resistance, iconic design that commands attention.",
+    price: 1165,
+    originalPrice: 2800,
+    image: "/products/laoli/image7.jpeg",
+    images: ["/products/laoli/image7.jpeg", "/products/laoli/image8.jpeg", "/products/laoli/image9.jpeg"],
+    category: "Men",
+    specs: {
+      caseSize: "41mm",
+      movement: "3235 Automatic",
+      strap: "904L Stainless Steel",
+      waterResistance: "300M",
+      crystal: "Sapphire",
+      caseMaterial: "904L Steel"
+    },
     inStock: true,
+    stock: 50,
+    badge: "Hot"
+  },
+  {
+    id: "submariner-no-date",
+    name: "Submariner No-Date",
+    description: "Pure, clean design with 3230 automatic movement. No date window for perfect symmetry. 300m water resistance, timeless elegance.",
+    price: 1165,
+    originalPrice: 2200,
+    image: "/products/laoli/image10.jpeg",
+    images: ["/products/laoli/image10.jpeg", "/products/laoli/image11.jpeg", "/products/laoli/image12.jpeg"],
+    category: "Men",
+    specs: {
+      caseSize: "41mm",
+      movement: "3230 Automatic",
+      strap: "904L Stainless Steel",
+      waterResistance: "300M",
+      crystal: "Sapphire",
+      caseMaterial: "904L Steel"
+    },
+    inStock: true,
+    stock: 50
+  },
+  {
+    id: "gmt-pepsi",
+    name: "GMT-Master II Pepsi",
+    description: "Dual-time zone with iconic red-blue ceramic bezel. 3285 automatic GMT movement, perfect for international travelers.",
+    price: 1440,
+    originalPrice: 3500,
+    image: "/products/laoli/image13.jpeg",
+    images: ["/products/laoli/image13.jpeg", "/products/laoli/image14.jpeg", "/products/laoli/image15.jpeg"],
+    category: "Men",
+    specs: {
+      caseSize: "40mm",
+      movement: "3285 Automatic GMT",
+      strap: "904L Stainless Steel",
+      waterResistance: "100M",
+      crystal: "Sapphire",
+      caseMaterial: "904L Steel"
+    },
+    inStock: true,
+    stock: 50,
     badge: "New"
   },
   {
-    id: "heritage-silver",
-    name: "The Heritage Silver",
-    description: "Polished silver-tone case with blue dial. A modern classic that pairs with any outfit.",
-    price: 69,
-    image: "/products/heritage-silver.jpg",
-    category: "Heritage Collection",
-    specs: { caseSize: "40mm", movement: "Japanese Quartz", strap: "Black Leather", waterResistance: "3ATM", crystal: "Mineral" },
-    inStock: true
-  },
-
-  // Aviator Collection - Pilot Style
-  {
-    id: "aviator-44",
-    name: "The Aviator 44",
-    description: "Bold pilot watch with 44mm case, luminous hands, and aviation-inspired design. Ready for takeoff.",
-    price: 99,
-    image: "/products/aviator-44.jpg",
-    category: "Aviator Collection",
-    specs: { caseSize: "44mm", movement: "Automatic", strap: "Brown Leather", waterResistance: "5ATM", crystal: "Sapphire" },
-    inStock: true
-  },
-  {
-    id: "aviator-chrono",
-    name: "The Aviator Chrono",
-    description: "Precision chronograph with slide rule bezel. The ultimate tool watch for aviation enthusiasts.",
-    price: 119,
-    image: "/products/aviator-chrono.jpg",
-    category: "Aviator Collection",
-    specs: { caseSize: "42mm", movement: "Quartz Chronograph", strap: "Stainless Steel", waterResistance: "10ATM", crystal: "Sapphire" },
+    id: "gmt-batman",
+    name: "GMT-Master II Batman",
+    description: "Black-blue ceramic bezel dual-time watch. 3285 automatic GMT movement, sleek design for the modern explorer.",
+    price: 1440,
+    originalPrice: 3500,
+    image: "/products/laoli/image16.jpeg",
+    images: ["/products/laoli/image16.jpeg", "/products/laoli/image17.jpeg", "/products/laoli/image18.jpeg"],
+    category: "Men",
+    specs: {
+      caseSize: "40mm",
+      movement: "3285 Automatic GMT",
+      strap: "904L Stainless Steel",
+      waterResistance: "100M",
+      crystal: "Sapphire",
+      caseMaterial: "904L Steel"
+    },
     inStock: true,
-    badge: "Popular"
+    stock: 50
   },
   {
-    id: "aviator-classic",
-    name: "The Aviator Classic",
-    description: "Clean pilot watch design with Arabic numerals and onion crown. Timeless aviation heritage.",
-    price: 89,
-    image: "/products/aviator-classic.jpg",
-    category: "Aviator Collection",
-    specs: { caseSize: "40mm", movement: "Automatic", strap: "Black Leather", waterResistance: "5ATM", crystal: "Mineral" },
-    inStock: true
-  },
-  {
-    id: "aviator-dual",
-    name: "The Aviator Dual Time",
-    description: "GMT function for the global traveler. Track two time zones with elegant simplicity.",
-    price: 109,
-    image: "/products/aviator-dual.jpg",
-    category: "Aviator Collection",
-    specs: { caseSize: "42mm", movement: "Quartz GMT", strap: "Brown Leather", waterResistance: "5ATM", crystal: "Sapphire" },
-    inStock: true
-  },
-  {
-    id: "aviator-sport",
-    name: "The Aviator Sport",
-    description: "Rugged pilot watch with canvas strap and super luminous dial. Built for adventure.",
-    price: 79,
-    image: "/products/aviator-sport.jpg",
-    category: "Aviator Collection",
-    specs: { caseSize: "42mm", movement: "Japanese Quartz", strap: "Canvas", waterResistance: "10ATM", crystal: "Mineral" },
+    id: "gmt-sprite",
+    name: "GMT-Master II Sprite",
+    description: "Unique black-green ceramic bezel with left-handed crown. 3285 automatic GMT movement, stand out from the crowd.",
+    price: 1440,
+    originalPrice: 3200,
+    image: "/products/laoli/image19.jpeg",
+    images: ["/products/laoli/image19.jpeg", "/products/laoli/image20.jpeg", "/products/laoli/image21.jpeg"],
+    category: "Men",
+    specs: {
+      caseSize: "40mm",
+      movement: "3285 Automatic GMT",
+      strap: "904L Stainless Steel",
+      waterResistance: "100M",
+      crystal: "Sapphire",
+      caseMaterial: "904L Steel"
+    },
     inStock: true,
-    badge: "Sale"
+    stock: 50
   },
-
-  // Diver Collection - Dive Watches
   {
-    id: "diver-300",
-    name: "The Diver 300",
-    description: "Professional 300m dive watch with rotating bezel and screw-down crown. Ready for the deep.",
-    price: 129,
-    image: "/products/diver-300.jpg",
-    category: "Diver Collection",
-    specs: { caseSize: "42mm", movement: "Automatic", strap: "Stainless Steel", waterResistance: "30ATM", crystal: "Sapphire" },
+    id: "datejust-41-blue",
+    name: "Datejust 41 Blue",
+    description: "41mm dress watch with stunning blue sunburst dial. 3235 automatic movement, fluted bezel, refined sophistication.",
+    price: 1440,
+    originalPrice: 3000,
+    image: "/products/laoli/image22.jpeg",
+    images: ["/products/laoli/image22.jpeg", "/products/laoli/image23.jpeg", "/products/laoli/image24.jpeg"],
+    category: "Men",
+    specs: {
+      caseSize: "41mm",
+      movement: "3235 Automatic",
+      strap: "904L Stainless Steel",
+      waterResistance: "100M",
+      crystal: "Sapphire",
+      caseMaterial: "904L Steel"
+    },
     inStock: true,
-    badge: "Bestseller"
+    stock: 50
   },
   {
-    id: "diver-200",
-    name: "The Diver 200",
-    description: "200m water resistance with classic dive watch aesthetics. Professional grade, everyday wear.",
-    price: 99,
-    image: "/products/diver-200.jpg",
-    category: "Diver Collection",
-    specs: { caseSize: "40mm", movement: "Automatic", strap: "Rubber", waterResistance: "20ATM", crystal: "Sapphire" },
-    inStock: true
-  },
-  {
-    id: "diver-vintage",
-    name: "The Vintage Diver",
-    description: "Retro-inspired dive watch with gilt dial and aged lume. Nostalgia meets functionality.",
-    price: 89,
-    image: "/products/diver-vintage.jpg",
-    category: "Diver Collection",
-    specs: { caseSize: "40mm", movement: "Automatic", strap: "Tropic Rubber", waterResistance: "20ATM", crystal: "Domed Acrylic" },
-    inStock: true
-  },
-  {
-    id: "diver-chrono",
-    name: "The Diver Chrono",
-    description: "Chronograph dive watch with 200m water resistance. Perfect for timing your dives.",
-    price: 139,
-    image: "/products/diver-chrono.jpg",
-    category: "Diver Collection",
-    specs: { caseSize: "44mm", movement: "Quartz Chronograph", strap: "Stainless Steel", waterResistance: "20ATM", crystal: "Sapphire" },
-    inStock: true
-  },
-
-  // Minimalist Collection - Clean Design
-  {
-    id: "minimalist",
-    name: "The Minimalist",
-    description: "Embrace timeless simplicity. Clean lines, refined details, and a comfortable mesh band.",
-    price: 69,
-    image: "/products/minimalist.jpg",
-    category: "Minimalist Collection",
-    specs: { caseSize: "38mm", movement: "Japanese Quartz", strap: "Milanese Mesh", waterResistance: "3ATM", crystal: "Mineral" },
-    inStock: true
-  },
-  {
-    id: "minimalist-36",
-    name: "The Minimalist 36",
-    description: "Ultra-clean 36mm case with no date window. Pure, understated elegance.",
-    price: 59,
-    image: "/products/minimalist-36.jpg",
-    category: "Minimalist Collection",
-    specs: { caseSize: "36mm", movement: "Swiss Quartz", strap: "Black Leather", waterResistance: "3ATM", crystal: "Mineral" },
-    inStock: true
-  },
-  {
-    id: "minimalist-rose",
-    name: "The Minimalist Rose",
-    description: "Rose gold case with white dial. Modern femininity meets minimalist design.",
-    price: 79,
-    image: "/products/minimalist-rose.jpg",
-    category: "Minimalist Collection",
-    specs: { caseSize: "36mm", movement: "Japanese Quartz", strap: "Rose Gold Mesh", waterResistance: "3ATM", crystal: "Mineral" },
+    id: "datejust-36-blue",
+    name: "Datejust 36 Blue",
+    description: "36mm classic size with blue sunburst dial. 3235 automatic movement, perfect proportions for elegant wrists.",
+    price: 1260,
+    originalPrice: 2800,
+    image: "/products/laoli/image25.jpeg",
+    images: ["/products/laoli/image25.jpeg", "/products/laoli/image26.jpeg", "/products/laoli/image27.jpeg"],
+    category: "Men",
+    specs: {
+      caseSize: "36mm",
+      movement: "3235 Automatic",
+      strap: "904L Stainless Steel",
+      waterResistance: "100M",
+      crystal: "Sapphire",
+      caseMaterial: "904L Steel"
+    },
     inStock: true,
-    badge: "New"
+    stock: 50
   },
   {
-    id: "minimalist-black",
-    name: "The Minimalist Black",
-    description: "All-black design with black case, dial, and strap. Stealth sophistication.",
-    price: 69,
-    image: "/products/minimalist-black.jpg",
-    category: "Minimalist Collection",
-    specs: { caseSize: "40mm", movement: "Quartz", strap: "Black Leather", waterResistance: "5ATM", crystal: "Mineral" },
-    inStock: true
-  },
-  {
-    id: "minimalist-bauhaus",
-    name: "The Bauhaus",
-    description: "Inspired by classic German design. Form follows function in perfect harmony.",
-    price: 89,
-    image: "/products/minimalist-bauhaus.jpg",
-    category: "Minimalist Collection",
-    specs: { caseSize: "38mm", movement: "Automatic", strap: "Brown Leather", waterResistance: "3ATM", crystal: "Mineral" },
-    inStock: true
-  },
-
-  // Chrono Collection - Chronographs
-  {
-    id: "classic-chrono",
-    name: "The Classic Chrono",
-    description: "Sophisticated chronograph with quartz movement and stainless steel construction.",
-    price: 89,
-    image: "/products/classic-chrono.jpg",
-    category: "Chronograph Collection",
-    specs: { caseSize: "40mm", movement: "Quartz Chronograph", strap: "Stainless Steel", waterResistance: "5ATM", crystal: "Mineral" },
-    inStock: true
-  },
-  {
-    id: "chrono-sport",
-    name: "The Sport Chrono",
-    description: "Tachymeter bezel and three sub-dials. Built for speed and precision.",
-    price: 99,
-    image: "/products/chrono-sport.jpg",
-    category: "Chronograph Collection",
-    specs: { caseSize: "42mm", movement: "Quartz Chronograph", strap: "Stainless Steel", waterResistance: "10ATM", crystal: "Sapphire" },
+    id: "explorer-36",
+    name: "Explorer 36",
+    description: "36mm field watch with iconic 3-6-9 Arabic numerals. 3230 automatic movement, built for exploration.",
+    price: 1360,
+    originalPrice: 2800,
+    image: "/products/laoli/image28.jpeg",
+    images: ["/products/laoli/image28.jpeg", "/products/laoli/image29.jpeg", "/products/laoli/image30.jpeg"],
+    category: "Men",
+    specs: {
+      caseSize: "36mm",
+      movement: "3230 Automatic",
+      strap: "904L Stainless Steel",
+      waterResistance: "100M",
+      crystal: "Sapphire",
+      caseMaterial: "904L Steel"
+    },
     inStock: true,
-    badge: "Popular"
+    stock: 50
   },
   {
-    id: "chrono-vintage",
-    name: "The Vintage Chrono",
-    description: "Panda dial chronograph with cream sub-dials. Racing heritage on your wrist.",
-    price: 109,
-    image: "/products/chrono-vintage.jpg",
-    category: "Chronograph Collection",
-    specs: { caseSize: "40mm", movement: "Quartz Chronograph", strap: "Brown Leather", waterResistance: "5ATM", crystal: "Mineral" },
-    inStock: true
-  },
-  {
-    id: "chrono-mechanical",
-    name: "The Mechanical Chrono",
-    description: "Automatic chronograph movement. The pinnacle of watchmaking craft.",
-    price: 199,
-    image: "/products/chrono-mechanical.jpg",
-    category: "Chronograph Collection",
-    specs: { caseSize: "42mm", movement: "Automatic Chronograph", strap: "Black Leather", waterResistance: "5ATM", crystal: "Sapphire" },
+    id: "explorer-ii-white",
+    name: "Explorer II White",
+    description: "42mm white dial with orange 24-hour hand. 3285 automatic GMT movement, designed for cave exploration.",
+    price: 1360,
+    originalPrice: 3200,
+    image: "/products/laoli/image31.jpeg",
+    images: ["/products/laoli/image31.jpeg", "/products/laoli/image32.jpeg", "/products/laoli/image33.jpeg"],
+    category: "Men",
+    specs: {
+      caseSize: "42mm",
+      movement: "3285 Automatic GMT",
+      strap: "904L Stainless Steel",
+      waterResistance: "100M",
+      crystal: "Sapphire",
+      caseMaterial: "904L Steel"
+    },
     inStock: true,
-    badge: "Premium"
-  },
-
-  // Field Collection - Military Style
-  {
-    id: "field-watch",
-    name: "The Field Watch",
-    description: "Military-inspired field watch with 24-hour dial and canvas strap. Rugged reliability.",
-    price: 69,
-    image: "/products/field-watch.jpg",
-    category: "Field Collection",
-    specs: { caseSize: "38mm", movement: "Japanese Quartz", strap: "Canvas", waterResistance: "5ATM", crystal: "Mineral" },
-    inStock: true
+    stock: 50
   },
   {
-    id: "field-auto",
-    name: "The Field Automatic",
-    description: "Automatic field watch with screw-down crown. Built for the outdoors.",
-    price: 89,
-    image: "/products/field-auto.jpg",
-    category: "Field Collection",
-    specs: { caseSize: "40mm", movement: "Automatic", strap: "Canvas", waterResistance: "10ATM", crystal: "Sapphire" },
-    inStock: true
-  },
-  {
-    id: "field-chrono",
-    name: "The Field Chrono",
-    description: "Chronograph field watch with compass bezel. Navigate in style.",
-    price: 99,
-    image: "/products/field-chrono.jpg",
-    category: "Field Collection",
-    specs: { caseSize: "42mm", movement: "Quartz Chronograph", strap: "Green Canvas", waterResistance: "10ATM", crystal: "Mineral" },
-    inStock: true
-  },
-
-  // Dress Collection - Elegant Evening
-  {
-    id: "dress-ultra",
-    name: "The Ultra Slim",
-    description: "6.5mm thin dress watch. Disappears on the wrist, commands attention.",
-    price: 79,
-    image: "/products/dress-ultra.jpg",
-    category: "Dress Collection",
-    specs: { caseSize: "38mm", movement: "Swiss Quartz", strap: "Black Leather", waterResistance: "3ATM", crystal: "Mineral" },
-    inStock: true
-  },
-  {
-    id: "dress-moon",
-    name: "The Moon Phase",
-    description: "Elegant moon phase complication. Track lunar cycles with sophistication.",
-    price: 119,
-    image: "/products/dress-moon.jpg",
-    category: "Dress Collection",
-    specs: { caseSize: "40mm", movement: "Quartz", strap: "Brown Leather", waterResistance: "3ATM", crystal: "Sapphire" },
+    id: "sea-dweller-red",
+    name: "Sea-Dweller Single Red",
+    description: "43mm professional deep dive watch with single red line. 3235 automatic movement, 1220m water resistance.",
+    price: 1165,
+    originalPrice: 3500,
+    image: "/products/laoli/image34.webp",
+    images: ["/products/laoli/image34.webp", "/products/laoli/image35.jpeg", "/products/laoli/image36.jpeg"],
+    category: "Men",
+    specs: {
+      caseSize: "43mm",
+      movement: "3235 Automatic",
+      strap: "904L Stainless Steel",
+      waterResistance: "1220M",
+      crystal: "Sapphire",
+      caseMaterial: "904L Steel"
+    },
     inStock: true,
-    badge: "Elegant"
+    stock: 50
   },
   {
-    id: "dress-square",
-    name: "The Art Deco",
-    description: "Square case with art deco numerals. A statement piece for formal occasions.",
-    price: 89,
-    image: "/products/dress-square.jpg",
-    category: "Dress Collection",
-    specs: { caseSize: "34mm x 40mm", movement: "Japanese Quartz", strap: "Black Leather", waterResistance: "3ATM", crystal: "Mineral" },
-    inStock: true
-  },
-  {
-    id: "dress-open",
-    name: "The Open Heart",
-    description: "Open-heart dial revealing the automatic movement. Watchmaking as art.",
-    price: 129,
-    image: "/products/dress-open.jpg",
-    category: "Dress Collection",
-    specs: { caseSize: "40mm", movement: "Automatic", strap: "Brown Leather", waterResistance: "3ATM", crystal: "Sapphire" },
-    inStock: true
-  },
-
-  // Sport Collection - Active Lifestyle
-  {
-    id: "sport-digital",
-    name: "The Digital Chrono",
-    description: "Ana-digi display with chronograph and alarm. Maximum functionality.",
-    price: 59,
-    image: "/products/sport-digital.jpg",
-    category: "Sport Collection",
-    specs: { caseSize: "44mm", movement: "Quartz Digital", strap: "Rubber", waterResistance: "10ATM", crystal: "Mineral" },
-    inStock: true
-  },
-  {
-    id: "sport-race",
-    name: "The Racing Chrono",
-    description: "Carbon fiber dial and red accents. Born for the track.",
-    price: 109,
-    image: "/products/sport-race.jpg",
-    category: "Sport Collection",
-    specs: { caseSize: "42mm", movement: "Quartz Chronograph", strap: "Black Rubber", waterResistance: "10ATM", crystal: "Sapphire" },
+    id: "sky-dweller-blue",
+    name: "Sky-Dweller Blue",
+    description: "42mm annual calendar with dual-time display. 9001 automatic movement, most sophisticated complication.",
+    price: 1660,
+    originalPrice: 3800,
+    image: "/products/laoli/image37.jpeg",
+    images: ["/products/laoli/image37.jpeg", "/products/laoli/image38.jpeg", "/products/laoli/image39.jpeg"],
+    category: "Men",
+    specs: {
+      caseSize: "42mm",
+      movement: "9001 Automatic",
+      strap: "904L Stainless Steel",
+      waterResistance: "100M",
+      crystal: "Sapphire",
+      caseMaterial: "904L Steel"
+    },
     inStock: true,
-    badge: "Sport"
+    stock: 50
   },
   {
-    id: "sport-titanium",
-    name: "The Titanium",
-    description: "Lightweight titanium case with 200m water resistance. Strong yet light.",
-    price: 149,
-    image: "/products/sport-titanium.jpg",
-    category: "Sport Collection",
-    specs: { caseSize: "42mm", movement: "Japanese Quartz", strap: "Titanium Bracelet", waterResistance: "20ATM", crystal: "Sapphire" },
-    inStock: true
+    id: "oyster-perpetual-turquoise",
+    name: "Oyster Perpetual 41 Turquoise",
+    description: "41mm vibrant turquoise dial, 3230 automatic movement. Colorful expression of timeless oyster design.",
+    price: 1360,
+    originalPrice: 2200,
+    image: "/products/laoli/image40.jpeg",
+    images: ["/products/laoli/image40.jpeg", "/products/laoli/image41.jpeg", "/products/laoli/image42.jpeg"],
+    category: "Unisex",
+    specs: {
+      caseSize: "41mm",
+      movement: "3230 Automatic",
+      strap: "904L Stainless Steel",
+      waterResistance: "100M",
+      crystal: "Sapphire",
+      caseMaterial: "904L Steel"
+    },
+    inStock: true,
+    stock: 50,
+    badge: "Trending"
+  },
+  {
+    id: "test-product-1euro",
+    name: "TEST PRODUCT - DO NOT BUY",
+    description: "Internal testing product for payment flow verification. Not for sale to customers.",
+    price: 1,
+    originalPrice: 99,
+    image: "/products/laoli/image1.webp",
+    images: ["/products/laoli/image1.webp"],
+    category: "Test",
+    specs: {
+      caseSize: "Test",
+      movement: "Test",
+      strap: "Test",
+      waterResistance: "Test",
+      crystal: "Test",
+      caseMaterial: "Test"
+    },
+    inStock: true,
+    stock: 999,
+    badge: "TEST"
   }
 ];
 
-export const categories = [
-  "All",
-  "Heritage Collection",
-  "Aviator Collection", 
-  "Diver Collection",
-  "Minimalist Collection",
-  "Chronograph Collection",
-  "Field Collection",
-  "Dress Collection",
-  "Sport Collection"
-];
-
-export const shippingRates: Record<string, { rate: number; name: string }> = {
-  GB: { rate: 8, name: "United Kingdom" },
-  DE: { rate: 6, name: "Germany" },
-  FR: { rate: 6, name: "France" },
-  NL: { rate: 6, name: "Netherlands" },
-  BE: { rate: 6, name: "Belgium" },
-  AT: { rate: 6, name: "Austria" },
-  IT: { rate: 7, name: "Italy" },
-  ES: { rate: 7, name: "Spain" },
-  PT: { rate: 7, name: "Portugal" },
-  SE: { rate: 10, name: "Sweden" },
-  DK: { rate: 10, name: "Denmark" },
-  FI: { rate: 10, name: "Finland" },
-  IE: { rate: 8, name: "Ireland" },
-  PL: { rate: 7, name: "Poland" },
-  CZ: { rate: 8, name: "Czech Republic" }
+export const shippingRates: Record<string, { name: string; rate: number }> = {
+  DE: { name: "Germany", rate: 6 },
+  FR: { name: "France", rate: 6.5 },
+  IT: { name: "Italy", rate: 6.5 },
+  ES: { name: "Spain", rate: 6 },
+  PT: { name: "Portugal", rate: 6 },
+  NL: { name: "Netherlands", rate: 6.5 },
+  BE: { name: "Belgium", rate: 6.5 },
+  AT: { name: "Austria", rate: 7 },
+  PL: { name: "Poland", rate: 7 },
+  CZ: { name: "Czech Republic", rate: 8 },
+  SE: { name: "Sweden", rate: 9 },
+  DK: { name: "Denmark", rate: 9 },
+  FI: { name: "Finland", rate: 10 },
+  IE: { name: "Ireland", rate: 10 },
+  GR: { name: "Greece", rate: 9 },
+  HU: { name: "Hungary", rate: 7 },
+  RO: { name: "Romania", rate: 7 },
+  SK: { name: "Slovakia", rate: 7.5 },
+  GB: { name: "United Kingdom", rate: 7 },
 };
 
-export const freeShippingThreshold = 79;
-// Image URLs for 30 products
-const imageUrls = [
-  "https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=600&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?w=600&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1524805444758-089113d48a6d?w=600&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1533139502658-0198f920d8e8?w=600&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1547996160-81dfa63595aa?w=600&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1614164185128-e4ec99c436d7?w=600&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=600&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1434056886845-dbd53c8f6d7a?w=600&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=600&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1619134778706-7015533a6150?w=600&h=600&fit=crop",
-];
+export const freeShippingThreshold = 150;
+
+export const categories = ["Men", "Unisex", "Diver", "GMT"];

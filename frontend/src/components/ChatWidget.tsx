@@ -122,7 +122,7 @@ export default function ChatWidget() {
               </div>
               <div>
                 <h3 className="font-semibold">Vintage Watch Assistant</h3>
-                <p className="text-xs text-gray-400">Online</p>
+                <p className="text-xs text-gray-800">Online</p>
               </div>
             </div>
             <button 
@@ -181,7 +181,7 @@ export default function ChatWidget() {
                 <button
                   key={q}
                   onClick={() => handleQuickQuestion(q)}
-                  className="whitespace-nowrap px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-full text-xs text-gray-700 transition-colors"
+                  className="whitespace-nowrap px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-full text-xs text-gray-900 transition-colors"
                 >
                   {q}
                 </button>
