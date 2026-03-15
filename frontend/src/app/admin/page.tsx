@@ -69,7 +69,7 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState("");
   
   const [products, setProducts] = useState(allProducts);
-  const [view, setView] = useState<"list" | "edit" | "add" | "settings" | "orders" | "users">("list");
+  const [view, setView] = useState<"list" | "edit" | "add" | "settings" | "orders" | "users" | "finance" | "analytics">("list");
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
@@ -441,7 +441,9 @@ export default function AdminPage() {
               >
                 <Truck className="w-5 h-5" />
                 <span className="font-medium">Orders</span>
-                <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">3</span>
+                {orders.length > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{orders.length}</span>
+                )}
               </button>
             )}
             
@@ -459,7 +461,7 @@ export default function AdminPage() {
             
             {hasPermission("finance") && (
               <button
-                onClick={() => setActiveTab("finance")}
+                onClick={() => { setView("finance"); setActiveTab("finance"); }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                   activeTab === "finance" ? "bg-amber-50 text-amber-700" : "text-gray-600 hover:bg-gray-50"
                 }`}
@@ -471,7 +473,7 @@ export default function AdminPage() {
             
             {hasPermission("analytics") && (
               <button
-                onClick={() => setActiveTab("analytics")}
+                onClick={() => { setView("analytics"); setActiveTab("analytics"); }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                   activeTab === "analytics" ? "bg-amber-50 text-amber-700" : "text-gray-600 hover:bg-gray-50"
                 }`}
@@ -917,6 +919,186 @@ export default function AdminPage() {
                       <p className="text-xs text-gray-500">{config.permissions.join(", ")}</p>
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Finance View */}
+          {view === "finance" && hasPermission("finance") && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-serif">Finance Overview</h2>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => alert("Export functionality coming soon")}
+                    className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                  >
+                    Export Report
+                  </button>
+                </div>
+              </div>
+
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                      <Wallet className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Total Revenue</p>
+                      <p className="text-2xl font-bold text-gray-900">€0.00</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400">No orders yet</p>
+                </div>
+
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Truck className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Orders</p>
+                      <p className="text-2xl font-bold text-gray-900">{orders.length}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    {orders.filter(o => o.status === "PAID").length} paid, {orders.filter(o => o.status === "PENDING").length} pending
+                  </p>
+                </div>
+
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                      <Package className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Products</p>
+                      <p className="text-2xl font-bold text-gray-900">{products.length}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400">In catalog</p>
+                </div>
+              </div>
+
+              {/* Wallet Status */}
+              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                <h3 className="text-lg font-semibold mb-4">Wallet Status</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-gray-900">L1 - Receiving Wallet</p>
+                      <p className="text-sm text-gray-500 font-mono">{walletConfig.l1Receiving.slice(0, 20)}...{walletConfig.l1Receiving.slice(-8)}</p>
+                    </div>
+                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">Active</span>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-gray-900">L2 - Operating Wallet</p>
+                      <p className="text-sm text-gray-500 font-mono">{walletConfig.l2Operating.slice(0, 20)}...{walletConfig.l2Operating.slice(-8)}</p>
+                    </div>
+                    <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs">Active</span>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-gray-900">L3 - Profit Wallet</p>
+                      <p className="text-sm text-gray-500 font-mono">{walletConfig.l3Profit.slice(0, 20)}...{walletConfig.l3Profit.slice(-8)}</p>
+                    </div>
+                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs">Active</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent Transactions */}
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold">Recent Transactions</h3>
+                </div>
+                <div className="p-8 text-center text-gray-500">
+                  <p>No transactions recorded yet.</p>
+                  <p className="text-sm mt-2">Transactions will appear when orders are placed.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Analytics View */}
+          {view === "analytics" && hasPermission("analytics") && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-serif">Analytics Dashboard</h2>
+                <div className="flex gap-3">
+                  <select className="px-4 py-2 border border-gray-300 rounded-lg">
+                    <option>Last 7 days</option>
+                    <option>Last 30 days</option>
+                    <option>Last 90 days</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
+                  <p className="text-3xl font-bold text-gray-900">0</p>
+                  <p className="text-sm text-gray-500 mt-1">Visitors</p>
+                </div>
+                <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
+                  <p className="text-3xl font-bold text-gray-900">0%</p>
+                  <p className="text-sm text-gray-500 mt-1">Conversion Rate</p>
+                </div>
+                <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
+                  <p className="text-3xl font-bold text-gray-900">€0.00</p>
+                  <p className="text-sm text-gray-500 mt-1">Avg Order Value</p>
+                </div>
+                <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
+                  <p className="text-3xl font-bold text-gray-900">0</p>
+                  <p className="text-sm text-gray-500 mt-1">Page Views</p>
+                </div>
+              </div>
+
+              {/* Charts Placeholder */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                  <h3 className="text-lg font-semibold mb-4">Sales Overview</h3>
+                  <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
+                    <p className="text-gray-400">No data available yet</p>
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                  <h3 className="text-lg font-semibold mb-4">Traffic Sources</h3>
+                  <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
+                    <p className="text-gray-400">No data available yet</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* API Status */}
+              <div className="mt-8 bg-white rounded-xl border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold mb-4">System Status</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Database Connection</span>
+                    <span className="flex items-center gap-2 text-green-600">
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                      Connected
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Vercel Deployment</span>
+                    <span className="flex items-center gap-2 text-green-600">
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                      Active
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Supabase Database</span>
+                    <span className="flex items-center gap-2 text-green-600">
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                      Healthy
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
