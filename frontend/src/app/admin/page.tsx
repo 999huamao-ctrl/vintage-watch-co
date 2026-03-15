@@ -7,9 +7,13 @@ import { products as allProducts } from "@/lib/data";
 // 默认 USDT 收款地址
 const DEFAULT_USDT_ADDRESS = "TYRo5Tq9F1ZVngfTdU2heAwmpZbqsWKGXJ";
 
+// 管理员账号
+const ADMIN_USERNAME = "admin";
+const ADMIN_PASSWORD = "admin123";
+
 export default function AdminPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [loginForm, setLoginForm] = useState({ email: "", password: "" });
+  const [loginForm, setLoginForm] = useState({ username: "", password: "" });
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
   
@@ -79,36 +83,20 @@ export default function AdminPage() {
   }, [isLoggedIn]);
 
   // 登录处理
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setLoginError("");
     
-    try {
-      const res = await fetch("/api/admin/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: loginForm.email,
-          password: loginForm.password,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.success) {
+    setTimeout(() => {
+      if (loginForm.username === ADMIN_USERNAME && loginForm.password === ADMIN_PASSWORD) {
         setIsLoggedIn(true);
         sessionStorage.setItem("admin_logged_in", "true");
-        sessionStorage.setItem("admin_user", JSON.stringify(data.user));
         setLoginError("");
       } else {
-        setLoginError(data.error || "Invalid email or password");
+        setLoginError("Invalid username or password");
       }
-    } catch (error) {
-      setLoginError("Network error. Please try again.");
-    } finally {
       setIsLoading(false);
-    }
+    }, 500);
   };
 
   // 登出
@@ -199,8 +187,8 @@ export default function AdminPage() {
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Email</label>
                 <input
                   type="text"
-                  value={loginForm.email}
-                  onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                  value={loginForm.username}
+                  onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 transition-colors text-gray-900"
                   placeholder="admin"
                   required
