@@ -15,6 +15,20 @@ interface User {
   role: UserRole;
 }
 
+// 订单类型定义
+interface Order {
+  id: string;
+  orderNumber: string;
+  status: string;
+  customerName: string;
+  customerEmail: string;
+  total: number;
+  createdAt: string;
+  paymentStatus: string;
+  trackingNumber?: string;
+  carrier?: string;
+}
+
 // 账号配置（用户名 -> 详细信息）
 const USER_CREDENTIALS: Record<string, { email: string; password: string; role: UserRole }> = {
   "superadmin": { email: "superadmin@horizonwatches.com", password: "super123", role: "SUPERADMIN" },
@@ -82,6 +96,12 @@ export default function AdminPage() {
   const [showUserForm, setShowUserForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [userForm, setUserForm] = useState({ username: "", password: "", role: "ADMIN" as UserRole });
+  
+  // 订单管理状态
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState("");
+  const [orderFilter, setOrderFilter] = useState("ALL");
 
   // 检查登录状态
   useEffect(() => {
@@ -110,6 +130,29 @@ export default function AdminPage() {
       setView(hash as any);
     }
   }, [isLoggedIn]);
+
+  // 加载订单数据
+  useEffect(() => {
+    if (view === "orders" && isLoggedIn) {
+      fetchOrders();
+    }
+  }, [view, isLoggedIn]);
+
+  const fetchOrders = async () => {
+    setOrdersLoading(true);
+    setOrdersError("");
+    try {
+      const res = await fetch("/api/admin/orders");
+      if (!res.ok) throw new Error("Failed to fetch orders");
+      const data = await res.json();
+      setOrders(data);
+    } catch (err) {
+      setOrdersError("Database not connected yet");
+      setOrders([]);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -557,12 +600,102 @@ export default function AdminPage() {
             </>
           )}
 
-          {/* Orders View (Placeholder) */}
+          {/* Orders View */}
           {view === "orders" && hasPermission("orders") && (
-            <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-              <Truck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Orders Management</h2>
-              <p className="text-gray-500">Coming soon - Connect to database for full order management</p>
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-serif">Orders Management</h2>
+                <div className="flex gap-3">
+                  <select 
+                    value={orderFilter}
+                    onChange={(e) => setOrderFilter(e.target.value)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg"
+                  >
+                    <option value="ALL">All Orders</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="PAID">Paid</option>
+                    <option value="SHIPPED">Shipped</option>
+                    <option value="DELIVERED">Delivered</option>
+                  </select>
+                  <button
+                    onClick={fetchOrders}
+                    className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-800"
+                  >
+                    Refresh
+                  </button>
+                </div>
+              </div>
+
+              {ordersLoading ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin w-8 h-8 border-2 border-stone-900 border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p className="text-gray-500">Loading orders...</p>
+                </div>
+              ) : ordersError ? (
+                <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+                  <Truck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">Orders Management</h2>
+                  <p className="text-gray-500 mb-4">{ordersError}</p>
+                  <button
+                    onClick={fetchOrders}
+                    className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-800"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : orders.length === 0 ? (
+                <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+                  <Truck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">No Orders Yet</h2>
+                  <p className="text-gray-500">Orders will appear here when customers make purchases.</p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Order</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Customer</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Total</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {orders
+                        .filter(order => orderFilter === "ALL" || order.status === orderFilter)
+                        .map((order) => (
+                        <tr key={order.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4">
+                            <div className="font-medium text-gray-900">{order.orderNumber}</div>
+                            <div className="text-sm text-gray-500">{order.id.slice(0, 8)}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-900">{order.customerName}</div>
+                            <div className="text-sm text-gray-500">{order.customerEmail}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              order.status === "DELIVERED" ? "bg-green-100 text-green-700" :
+                              order.status === "SHIPPED" ? "bg-blue-100 text-blue-700" :
+                              order.status === "PAID" ? "bg-amber-100 text-amber-700" :
+                              "bg-gray-100 text-gray-700"
+                            }`}>
+                              {order.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm font-semibold text-gray-900">
+                            €{order.total}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500">
+                            {new Date(order.createdAt).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
