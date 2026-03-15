@@ -10,11 +10,12 @@ const DEFAULT_USDT_ADDRESS = "TYRo5Tq9F1ZVngfTdU2heAwmpZbqsWKGXJ";
 type UserRole = "SUPERADMIN" | "ADMIN" | "SUPPLY" | "LOGISTICS";
 
 interface User {
+  username: string;
   email: string;
   role: UserRole;
 }
 
-// 账号配置（用户名 -> 邮箱映射）
+// 账号配置（用户名 -> 详细信息）
 const USER_CREDENTIALS: Record<string, { email: string; password: string; role: UserRole }> = {
   "superadmin": { email: "superadmin@horizonwatches.com", password: "super123", role: "SUPERADMIN" },
   "admin": { email: "admin@horizonwatches.com", password: "admin123", role: "ADMIN" },
@@ -63,10 +64,17 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState("products");
   
   // 用户管理状态（仅SuperAdmin）
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<User[]>(() => {
+    // 初始化时加载现有的4个账号
+    return Object.entries(USER_CREDENTIALS).map(([username, data]) => ({
+      username,
+      email: data.email,
+      role: data.role,
+    }));
+  });
   const [showUserForm, setShowUserForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [userForm, setUserForm] = useState({ email: "", password: "", role: "ADMIN" as UserRole });
+  const [userForm, setUserForm] = useState({ username: "", password: "", role: "ADMIN" as UserRole });
 
   // 检查登录状态
   useEffect(() => {
@@ -113,7 +121,11 @@ export default function AdminPage() {
     
     setTimeout(() => {
       if (credentials && loginForm.password === credentials.password) {
-        const user = { email: credentials.email, role: credentials.role };
+        const user: User = { 
+          username: username,
+          email: credentials.email, 
+          role: credentials.role 
+        };
         setIsLoggedIn(true);
         setCurrentUser(user);
         sessionStorage.setItem("admin_logged_in", "true");
@@ -207,23 +219,32 @@ export default function AdminPage() {
   const handleSaveUser = () => {
     if (editingUser) {
       // 编辑用户
-      setUsers(users.map(u => u.email === editingUser.email ? { ...userForm, email: editingUser.email } : u));
+      setUsers(users.map(u => u.username === editingUser.username ? { 
+        username: editingUser.username,
+        email: editingUser.email,
+        role: userForm.role 
+      } : u));
     } else {
       // 新建用户
-      if (users.find(u => u.email === userForm.email)) {
-        alert("User with this email already exists");
+      if (users.find(u => u.username === userForm.username)) {
+        alert("User with this username already exists");
         return;
       }
-      setUsers([...users, userForm]);
+      const newEmail = `${userForm.username}@horizonwatches.com`;
+      setUsers([...users, { 
+        username: userForm.username,
+        email: newEmail,
+        role: userForm.role 
+      }]);
     }
     setShowUserForm(false);
     setEditingUser(null);
-    setUserForm({ email: "", password: "", role: "ADMIN" });
+    setUserForm({ username: "", password: "", role: "ADMIN" });
   };
 
-  const handleDeleteUser = (email: string) => {
+  const handleDeleteUser = (username: string) => {
     if (confirm("Delete this user?")) {
-      setUsers(users.filter(u => u.email !== email));
+      setUsers(users.filter(u => u.username !== username));
     }
   };
 
@@ -610,7 +631,7 @@ export default function AdminPage() {
                 <button
                   onClick={() => {
                     setEditingUser(null);
-                    setUserForm({ email: "", password: "", role: "ADMIN" });
+                    setUserForm({ username: "", password: "", role: "ADMIN" });
                     setShowUserForm(true);
                   }}
                   className="flex items-center gap-2 px-4 py-2.5 bg-stone-900 text-white rounded-xl hover:bg-stone-800 transition-colors"
@@ -624,7 +645,7 @@ export default function AdminPage() {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Email</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Username</th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Role</th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Permissions</th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
@@ -639,8 +660,11 @@ export default function AdminPage() {
                       </tr>
                     )}
                     {users.map((user) => (
-                      <tr key={user.email} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 font-medium text-gray-900">{user.email}</td>
+                      <tr key={user.username} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-gray-900">{user.username}</div>
+                          <div className="text-sm text-gray-500">{user.email}</div>
+                        </td>
                         <td className="px-6 py-4">
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                             user.role === "SUPERADMIN" ? "bg-purple-100 text-purple-700" :
@@ -659,7 +683,7 @@ export default function AdminPage() {
                             <button
                               onClick={() => {
                                 setEditingUser(user);
-                                setUserForm({ email: user.email, password: "", role: user.role });
+                                setUserForm({ username: user.username, password: "", role: user.role });
                                 setShowUserForm(true);
                               }}
                               className="p-2 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
@@ -667,7 +691,7 @@ export default function AdminPage() {
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => handleDeleteUser(user.email)}
+                              onClick={() => handleDeleteUser(user.username)}
                               className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -708,15 +732,18 @@ export default function AdminPage() {
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
                 <input
-                  type="email"
-                  value={userForm.email}
-                  onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                  type="text"
+                  value={userForm.username}
+                  onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
                   disabled={!!editingUser}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 disabled:bg-gray-100 text-gray-900"
-                  placeholder="user@example.com"
+                  placeholder="e.g., johnsmith"
                 />
+                {!editingUser && (
+                  <p className="text-xs text-gray-500 mt-1">Email will be: {userForm.username}@horizonwatches.com</p>
+                )}
               </div>
               
               <div>
@@ -751,7 +778,7 @@ export default function AdminPage() {
                 onClick={() => {
                   setShowUserForm(false);
                   setEditingUser(null);
-                  setUserForm({ email: "", password: "", role: "ADMIN" });
+                  setUserForm({ username: "", password: "", role: "ADMIN" });
                 }}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50"
               >
