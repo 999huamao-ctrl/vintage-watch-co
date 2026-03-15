@@ -7,13 +7,10 @@ import { products as allProducts } from "@/lib/data";
 // 默认 USDT 收款地址
 const DEFAULT_USDT_ADDRESS = "TYRo5Tq9F1ZVngfTdU2heAwmpZbqsWKGXJ";
 
-// 默认登录凭证（实际生产环境应该使用更安全的方式）
-const DEFAULT_USERNAME = "admin";
-const DEFAULT_PASSWORD = "vintage2024";
-
 export default function AdminPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [loginForm, setLoginForm] = useState({ username: "", password: "" });
+  const [loginForm, setLoginForm] = useState({ email: "", password: "" });
+  const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
   
   const [products, setProducts] = useState(allProducts);
@@ -82,14 +79,35 @@ export default function AdminPage() {
   }, [isLoggedIn]);
 
   // 登录处理
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loginForm.username === DEFAULT_USERNAME && loginForm.password === DEFAULT_PASSWORD) {
-      setIsLoggedIn(true);
-      sessionStorage.setItem("admin_logged_in", "true");
-      setLoginError("");
-    } else {
-      setLoginError("Invalid username or password");
+    setIsLoading(true);
+    setLoginError("");
+    
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: loginForm.email,
+          password: loginForm.password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setIsLoggedIn(true);
+        sessionStorage.setItem("admin_logged_in", "true");
+        sessionStorage.setItem("admin_user", JSON.stringify(data.user));
+        setLoginError("");
+      } else {
+        setLoginError(data.error || "Invalid email or password");
+      }
+    } catch (error) {
+      setLoginError("Network error. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -178,13 +196,13 @@ export default function AdminPage() {
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">Username</label>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Email</label>
                 <input
-                  type="text"
-                  value={loginForm.username}
-                  onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                  type="email"
+                  value={loginForm.email}
+                  onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 transition-colors text-gray-900"
-                  placeholder="admin"
+                  placeholder="admin@horizonwatches.com"
                   required
                 />
               </div>
@@ -209,15 +227,12 @@ export default function AdminPage() {
 
               <button
                 type="submit"
-                className="w-full bg-stone-900 text-white py-3 rounded-lg font-semibold hover:bg-stone-800 transition-colors"
+                disabled={isLoading}
+                className="w-full bg-stone-900 text-white py-3 rounded-lg font-semibold hover:bg-stone-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Sign In
+                {isLoading ? "Signing In..." : "Sign In"}
               </button>
             </form>
-
-            <div className="mt-6 text-center text-xs text-gray-400">
-              Default: admin / vintage2024
-            </div>
           </div>
         </div>
       </div>
