@@ -198,11 +198,11 @@ export default function AdminPage() {
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Email</label>
                 <input
-                  type="email"
+                  type="text"
                   value={loginForm.email}
                   onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 transition-colors text-gray-900"
-                  placeholder="admin@horizonwatches.com"
+                  placeholder="admin"
                   required
                 />
               </div>

@@ -6,9 +6,12 @@ export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
 
+    // 支持简单用户名或完整邮箱
+    const emailToQuery = email.includes('@') ? email : `${email}@horizonwatches.com`;
+
     // 查找用户
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: emailToQuery },
     });
 
     if (!user) {
