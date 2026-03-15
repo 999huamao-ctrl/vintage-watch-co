@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma, getDashboardStats, getOrders, updateOrderStatus, confirmPayment } from '@/lib/db';
 
-// 静态导出时跳过此路由
-export const dynamic = 'error';
+// SSR 模式下使用动态渲染
+export const dynamic = 'force-dynamic';
 
 // ==================== 仪表盘数据 ====================
 

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
-// 静态导出时跳过此路由
-export const dynamic = 'error';
+// SSR 模式下使用动态渲染
+export const dynamic = 'force-dynamic';
 
 // 简单的 CSV 转换函数
 function toCSV(data: any[]): string {
