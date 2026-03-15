@@ -54,13 +54,19 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState("");
   
   const [products, setProducts] = useState(allProducts);
-  const [view, setView] = useState<"list" | "edit" | "add" | "settings" | "orders">("list");
+  const [view, setView] = useState<"list" | "edit" | "add" | "settings" | "orders" | "users">("list");
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [usdtAddress, setUsdtAddress] = useState("");
   const [usdtSaved, setUsdtSaved] = useState(false);
   const [activeTab, setActiveTab] = useState("products");
+  
+  // 用户管理状态（仅SuperAdmin）
+  const [users, setUsers] = useState<User[]>([]);
+  const [showUserForm, setShowUserForm] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [userForm, setUserForm] = useState({ email: "", password: "", role: "ADMIN" as UserRole });
 
   // 检查登录状态
   useEffect(() => {
@@ -197,6 +203,30 @@ export default function AdminPage() {
     p.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // 用户管理功能
+  const handleSaveUser = () => {
+    if (editingUser) {
+      // 编辑用户
+      setUsers(users.map(u => u.email === editingUser.email ? { ...userForm, email: editingUser.email } : u));
+    } else {
+      // 新建用户
+      if (users.find(u => u.email === userForm.email)) {
+        alert("User with this email already exists");
+        return;
+      }
+      setUsers([...users, userForm]);
+    }
+    setShowUserForm(false);
+    setEditingUser(null);
+    setUserForm({ email: "", password: "", role: "ADMIN" });
+  };
+
+  const handleDeleteUser = (email: string) => {
+    if (confirm("Delete this user?")) {
+      setUsers(users.filter(u => u.email !== email));
+    }
+  };
+
   // 登录页面
   if (!isLoggedIn) {
     return (
@@ -260,21 +290,11 @@ export default function AdminPage() {
               </button>
             </form>
 
-            {/* Demo Accounts */}
-            <div className="mt-8 pt-6 border-t border-gray-100">
-              <p className="text-xs text-gray-400 text-center mb-4">Demo Accounts</p>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                {Object.entries(USER_CREDENTIALS).map(([key, cred]) => (
-                  <button
-                    key={key}
-                    onClick={() => setLoginForm({ username: key, password: cred.password })}
-                    className="px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-gray-600 transition-colors text-left"
-                  >
-                    <span className="font-medium capitalize">{key}</span>
-                    <span className="text-gray-400 block">{cred.password}</span>
-                  </button>
-                ))}
-              </div>
+            {/* Security Note */}
+            <div className="mt-6 pt-4 border-t border-gray-100">
+              <p className="text-xs text-gray-400 text-center">
+                Authorized personnel only
+              </p>
             </div>
           </div>
         </div>
@@ -354,7 +374,7 @@ export default function AdminPage() {
             
             {hasPermission("users") && (
               <button
-                onClick={() => setActiveTab("users")}
+                onClick={() => { setView("users"); setActiveTab("users"); }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                   activeTab === "users" ? "bg-amber-50 text-amber-700" : "text-gray-600 hover:bg-gray-50"
                 }`}
@@ -582,8 +602,171 @@ export default function AdminPage() {
               </div>
             </div>
           )}
+          {/* Users Management */}
+          {view === "users" && hasPermission("users") && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-serif">User Management</h2>
+                <button
+                  onClick={() => {
+                    setEditingUser(null);
+                    setUserForm({ email: "", password: "", role: "ADMIN" });
+                    setShowUserForm(true);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-stone-900 text-white rounded-xl hover:bg-stone-800 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add User
+                </button>
+              </div>
+
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Email</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Role</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Permissions</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {users.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                          No users created yet. Click "Add User" to create one.
+                        </td>
+                      </tr>
+                    )}
+                    {users.map((user) => (
+                      <tr key={user.email} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 font-medium text-gray-900">{user.email}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            user.role === "SUPERADMIN" ? "bg-purple-100 text-purple-700" :
+                            user.role === "ADMIN" ? "bg-blue-100 text-blue-700" :
+                            user.role === "SUPPLY" ? "bg-green-100 text-green-700" :
+                            "bg-orange-100 text-orange-700"
+                          }`}>
+                            {ROLE_PERMISSIONS[user.role].label}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {ROLE_PERMISSIONS[user.role].permissions.join(", ")}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => {
+                                setEditingUser(user);
+                                setUserForm({ email: user.email, password: "", role: user.role });
+                                setShowUserForm(true);
+                              }}
+                              className="p-2 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(user.email)}
+                              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Role Reference */}
+              <div className="mt-8 bg-gray-50 rounded-xl p-6">
+                <h3 className="text-sm font-semibold text-gray-700 mb-4">Role Permissions Reference</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {Object.entries(ROLE_PERMISSIONS).map(([role, config]) => (
+                    <div key={role} className="bg-white rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <config.icon className="w-4 h-4 text-amber-500" />
+                        <span className="font-medium text-gray-900">{config.label}</span>
+                      </div>
+                      <p className="text-xs text-gray-500">{config.permissions.join(", ")}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </main>
       </div>
+
+      {/* User Form Modal */}
+      {showUserForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <h3 className="text-lg font-semibold mb-4">{editingUser ? "Edit User" : "Add New User"}</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={userForm.email}
+                  onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                  disabled={!!editingUser}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 disabled:bg-gray-100 text-gray-900"
+                  placeholder="user@example.com"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {editingUser ? "New Password (leave blank to keep current)" : "Password"}
+                </label>
+                <input
+                  type="password"
+                  value={userForm.password}
+                  onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-gray-900"
+                  placeholder={editingUser ? "••••••••" : "Enter password"}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                <select
+                  value={userForm.role}
+                  onChange={(e) => setUserForm({ ...userForm, role: e.target.value as UserRole })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-gray-900"
+                >
+                  <option value="ADMIN">Administrator</option>
+                  <option value="SUPPLY">Supply Manager</option>
+                  <option value="LOGISTICS">Logistics Manager</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowUserForm(false);
+                  setEditingUser(null);
+                  setUserForm({ email: "", password: "", role: "ADMIN" });
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveUser}
+                className="flex-1 px-4 py-2 bg-stone-900 text-white rounded-xl hover:bg-stone-800"
+              >
+                {editingUser ? "Save Changes" : "Create User"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation */}
       {showDeleteConfirm && (
