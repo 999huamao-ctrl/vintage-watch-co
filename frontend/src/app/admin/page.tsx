@@ -1,22 +1,33 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Package, Plus, Edit2, Trash2, Download, Upload, Search, Save, X, Wallet, Settings, Lock, LogOut, Users, Truck, Shield, UserCircle, Globe } from "lucide-react";
-import { products as allProducts } from "@/lib/data";
+import { Package, Plus, Edit2, Trash2, Download, Search, Save, X, Wallet, Settings, Lock, LogOut, Users, Truck, Shield, UserCircle, Globe, BarChart3, TrendingUp, DollarSign, ShoppingCart } from "lucide-react";
 import { translations, Language, TranslationKey } from "./i18n";
-
-// 默认 USDT 收款地址
-const DEFAULT_USDT_ADDRESS = "TYRo5Tq9F1ZVngfTdU2heAwmpZbqsWKGXJ";
 
 type UserRole = "SUPERADMIN" | "ADMIN" | "SUPPLY" | "LOGISTICS";
 
 interface User {
+  id: string;
   username: string;
   email: string;
   role: UserRole;
+  isActive: boolean;
 }
 
-// 订单类型定义
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  originalPrice?: number;
+  category: string;
+  stock: number;
+  isActive: boolean;
+  image: string;
+  caseSize?: string;
+  movement?: string;
+  strap?: string;
+}
+
 interface Order {
   id: string;
   orderNumber: string;
@@ -30,53 +41,42 @@ interface Order {
   carrier?: string;
 }
 
-// 账号配置（用户名 -> 详细信息）
-const USER_CREDENTIALS: Record<string, { email: string; password: string; role: UserRole }> = {
-  "superadmin": { email: "superadmin@horizonwatches.com", password: "super123", role: "SUPERADMIN" },
-  "admin": { email: "admin@horizonwatches.com", password: "admin123", role: "ADMIN" },
-  "supply": { email: "supply@horizonwatches.com", password: "supply123", role: "SUPPLY" },
-  "logistics": { email: "logistics@horizonwatches.com", password: "logistics123", role: "LOGISTICS" },
-};
+interface DashboardData {
+  totalOrders: number;
+  totalProducts: number;
+  totalUsers: number;
+  pendingOrders: number;
+  lowStockProducts: number;
+  todayRevenue: number;
+  todayOrders: number;
+}
 
-// 权限配置 - 使用函数返回标签以支持多语言
 const getRolePermissions = (t: (key: TranslationKey) => string): Record<UserRole, { label: string; icon: any; permissions: string[] }> => ({
   SUPERADMIN: {
     label: t("superadmin"),
     icon: Shield,
-    permissions: ["products", "orders", "users", "settings", "finance", "analytics"],
+    permissions: ["dashboard", "products", "orders", "users", "settings", "finance", "analytics"],
   },
   ADMIN: {
     label: t("admin"),
     icon: UserCircle,
-    permissions: ["products", "orders"],
+    permissions: ["dashboard", "products", "orders"],
   },
   SUPPLY: {
     label: t("supply"),
     icon: Package,
-    permissions: ["products", "inventory"],
+    permissions: ["dashboard", "products", "inventory"],
   },
   LOGISTICS: {
     label: t("logistics"),
     icon: Truck,
-    permissions: ["orders", "shipping"],
+    permissions: ["dashboard", "orders", "shipping"],
   },
 });
 
 export default function AdminPage() {
-  // 语言状态
   const [language, setLanguage] = useState<Language>("en");
-  
-  // 翻译函数
-  const t = (key: TranslationKey): string => {
-    return translations[language][key] || translations.en[key] || key;
-  };
-  
-  // 切换语言
-  const toggleLanguage = () => {
-    const newLang = language === "en" ? "zh" : "en";
-    setLanguage(newLang);
-    localStorage.setItem("admin_language", newLang);
-  };
+  const t = (key: TranslationKey): string => translations[language][key] || translations.en[key] || key;
   
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -84,1303 +84,587 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
   
-  const [products, setProducts] = useState(allProducts);
-  const [view, setView] = useState<"list" | "edit" | "add" | "settings" | "orders" | "users" | "finance" | "analytics">("list");
-  const [editingProduct, setEditingProduct] = useState<any>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   
-  // 3级钱包状态（仅SuperAdmin可设置）
-  const [walletConfig, setWalletConfig] = useState({
-    l1Receiving: "TGPBhfjSuwjrfGUtdqt6EZUbzhbRCGfC5c",
-    l2Operating: "TCWgr2qGcheRsD7kceoFpJfMg59fFrJGCq", 
-    l3Profit: "TUyTqV47pd7o3Bg6Uhw5XJ9rwkdgi6tsKb",
-  });
-  const [walletSaved, setWalletSaved] = useState(false);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [dataError, setDataError] = useState("");
   
-  const [activeTab, setActiveTab] = useState("products");
+  // Product editing
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [showProductForm, setShowProductForm] = useState(false);
   
-  // 用户管理状态（仅SuperAdmin）
-  const [users, setUsers] = useState<User[]>(() => {
-    // 初始化时加载现有的4个账号
-    return Object.entries(USER_CREDENTIALS).map(([username, data]) => ({
-      username,
-      email: data.email,
-      role: data.role,
-    }));
-  });
+  // Order management
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showOrderDetail, setShowOrderDetail] = useState(false);
+  
+  // User management
   const [showUserForm, setShowUserForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [userForm, setUserForm] = useState({ username: "", password: "", role: "ADMIN" as UserRole });
   
-  // 订单管理状态
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [ordersLoading, setOrdersLoading] = useState(false);
-  const [ordersError, setOrdersError] = useState("");
-  const [orderFilter, setOrderFilter] = useState("ALL");
+  // Wallet config
+  const [walletConfig, setWalletConfig] = useState({
+    l1Receiving: "",
+    l2Operating: "",
+    l3Profit: "",
+  });
   
-  // 权限配置（组件内定义以支持多语言）
   const ROLE_PERMISSIONS = getRolePermissions(t);
 
-  // 检查登录状态
+  // Load language
   useEffect(() => {
-    // 加载语言设置
     const savedLang = localStorage.getItem("admin_language") as Language;
-    if (savedLang && (savedLang === "en" || savedLang === "zh")) {
-      setLanguage(savedLang);
-    }
-    
-    const loggedIn = sessionStorage.getItem("admin_logged_in");
+    if (savedLang) setLanguage(savedLang);
+  }, []);
+
+  const toggleLanguage = () => {
+    const newLang = language === "en" ? "zh" : "en";
+    setLanguage(newLang);
+    localStorage.setItem("admin_language", newLang);
+  };
+
+  // Check login status
+  useEffect(() => {
+    const token = sessionStorage.getItem("admin_token");
     const savedUser = sessionStorage.getItem("admin_user");
-    if (loggedIn === "true" && savedUser) {
+    if (token && savedUser) {
       setIsLoggedIn(true);
       setCurrentUser(JSON.parse(savedUser));
     }
-    
-    const saved = localStorage.getItem("admin_products");
-    if (saved) {
-      setProducts(JSON.parse(saved));
-    }
-    const savedWallets = localStorage.getItem("wallet_config");
-    if (savedWallets) {
-      setWalletConfig(JSON.parse(savedWallets));
-    }
   }, []);
 
-  // 同步浏览器历史记录
+  // Load data when tab changes
   useEffect(() => {
     if (!isLoggedIn) return;
-    const hash = window.location.hash.slice(1);
-    if (hash && ["list", "edit", "add", "settings", "orders"].includes(hash)) {
-      setView(hash as any);
+    
+    switch (activeTab) {
+      case "dashboard":
+        fetchDashboard();
+        break;
+      case "products":
+        fetchProducts();
+        break;
+      case "orders":
+        fetchOrders();
+        break;
+      case "users":
+        if (currentUser?.role === "SUPERADMIN") fetchUsers();
+        break;
+      case "settings":
+        fetchWalletConfig();
+        break;
     }
-  }, [isLoggedIn]);
+  }, [activeTab, isLoggedIn]);
 
-  // 加载订单数据
-  useEffect(() => {
-    if (view === "orders" && isLoggedIn) {
-      fetchOrders();
+  // API Functions
+  const fetchDashboard = async () => {
+    setDataLoading(true);
+    try {
+      const res = await fetch("/api/admin/dashboard");
+      if (!res.ok) throw new Error("Failed to fetch dashboard");
+      const data = await res.json();
+      setDashboardData(data);
+    } catch (err) {
+      setDataError("Failed to load dashboard");
+    } finally {
+      setDataLoading(false);
     }
-  }, [view, isLoggedIn]);
+  };
+
+  const fetchProducts = async () => {
+    setDataLoading(true);
+    try {
+      const res = await fetch("/api/admin/products");
+      if (!res.ok) throw new Error("Failed to fetch products");
+      const data = await res.json();
+      setProducts(data);
+    } catch (err) {
+      setDataError("Failed to load products");
+    } finally {
+      setDataLoading(false);
+    }
+  };
 
   const fetchOrders = async () => {
-    setOrdersLoading(true);
-    setOrdersError("");
+    setDataLoading(true);
     try {
       const res = await fetch("/api/admin/orders");
       if (!res.ok) throw new Error("Failed to fetch orders");
       const data = await res.json();
       setOrders(data);
     } catch (err) {
-      setOrdersError("Database not connected yet");
-      setOrders([]);
+      setDataError("Failed to load orders");
     } finally {
-      setOrdersLoading(false);
+      setDataLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (!isLoggedIn) return;
-    const newHash = view === "list" ? "" : view;
-    if (window.location.hash.slice(1) !== newHash) {
-      window.history.pushState(null, "", newHash ? `#${newHash}` : window.location.pathname);
+  const fetchUsers = async () => {
+    setDataLoading(true);
+    try {
+      const res = await fetch("/api/admin/users");
+      if (!res.ok) throw new Error("Failed to fetch users");
+      const data = await res.json();
+      setUsers(data);
+    } catch (err) {
+      setDataError("Failed to load users");
+    } finally {
+      setDataLoading(false);
     }
-  }, [view, isLoggedIn]);
+  };
 
-  // 登录处理
+  const fetchWalletConfig = async () => {
+    try {
+      const res = await fetch("/api/admin/wallet");
+      if (res.ok) {
+        const data = await res.json();
+        setWalletConfig(data);
+      }
+    } catch (err) {
+      console.error("Failed to load wallet config");
+    }
+  };
+
+  // Login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setLoginError("");
     
-    const username = loginForm.username.toLowerCase().trim();
-    const credentials = USER_CREDENTIALS[username];
-    
-    setTimeout(() => {
-      if (credentials && loginForm.password === credentials.password) {
-        const user: User = { 
-          username: username,
-          email: credentials.email, 
-          role: credentials.role 
-        };
-        setIsLoggedIn(true);
-        setCurrentUser(user);
-        sessionStorage.setItem("admin_logged_in", "true");
-        sessionStorage.setItem("admin_user", JSON.stringify(user));
-        setLoginError("");
-      } else {
-        setLoginError("Invalid username or password");
-      }
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(loginForm),
+      });
+      
+      if (!res.ok) throw new Error("Invalid credentials");
+      
+      const data = await res.json();
+      sessionStorage.setItem("admin_token", data.token);
+      sessionStorage.setItem("admin_user", JSON.stringify(data.user));
+      setIsLoggedIn(true);
+      setCurrentUser(data.user);
+    } catch (err) {
+      setLoginError(t("invalidCredentials"));
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
   };
 
-  // 登出
   const handleLogout = () => {
+    sessionStorage.removeItem("admin_token");
+    sessionStorage.removeItem("admin_user");
     setIsLoggedIn(false);
     setCurrentUser(null);
-    sessionStorage.removeItem("admin_logged_in");
-    sessionStorage.removeItem("admin_user");
-    setView("list");
+    setActiveTab("dashboard");
   };
 
-  // 检查权限
+  // Check permission
   const hasPermission = (permission: string) => {
     if (!currentUser) return false;
-    return ROLE_PERMISSIONS[currentUser.role].permissions.includes(permission);
+    return ROLE_PERMISSIONS[currentUser.role]?.permissions.includes(permission) || false;
   };
 
-  // 保存钱包配置
-  const saveWalletConfig = () => {
-    localStorage.setItem("wallet_config", JSON.stringify(walletConfig));
-    setWalletSaved(true);
-    setTimeout(() => setWalletSaved(false), 2000);
-  };
+  // Render functions
+  const renderLogin = () => (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+      <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-8 w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl mx-auto mb-4 flex items-center justify-center">
+            <Lock className="w-8 h-8 text-slate-900" />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-2">{t("adminLogin")}</h1>
+          <p className="text-slate-400">{t("loginSubtitle")}</p>
+        </div>
 
-  // 保存产品数据
-  const saveProducts = (newProducts: any[]) => {
-    setProducts(newProducts);
-    localStorage.setItem("admin_products", JSON.stringify(newProducts));
-  };
-
-  const handleDelete = (id: string) => {
-    const newProducts = products.filter(p => p.id !== id);
-    saveProducts(newProducts);
-    setShowDeleteConfirm(null);
-  };
-
-  const handleSave = (product: any) => {
-    if (view === "add") {
-      saveProducts([...products, product]);
-    } else {
-      const newProducts = products.map(p => p.id === product.id ? product : p);
-      saveProducts(newProducts);
-    }
-    setView("list");
-    setEditingProduct(null);
-  };
-
-  const handleExport = () => {
-    const dataStr = JSON.stringify(products, null, 2);
-    const blob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `products-${new Date().toISOString().split("T")[0]}.json`;
-    link.click();
-  };
-
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const imported = JSON.parse(event.target?.result as string);
-          saveProducts(imported);
-          alert("Products imported successfully!");
-        } catch {
-          alert("Invalid JSON file");
-        }
-      };
-      reader.readAsText(file);
-    }
-  };
-
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.category.toLowerCase().includes(searchTerm.toLowerCase())
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">{t("username")}</label>
+            <input
+              type="text"
+              value={loginForm.username}
+              onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+              className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500"
+              placeholder="admin"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">{t("password")}</label>
+            <input
+              type="password"
+              value={loginForm.password}
+              onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+              className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500"
+              placeholder="••••••"
+            />
+          </div>
+          {loginError && (
+            <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 text-red-400 text-sm">
+              {loginError}
+            </div>
+          )}
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-900 font-semibold py-3 rounded-lg transition-all disabled:opacity-50"
+          >
+            {isLoading ? t("loggingIn") : t("login")}
+          </button>
+        </form>
+      </div>
+    </div>
   );
 
-  // 用户管理功能
-  const handleSaveUser = () => {
-    if (editingUser) {
-      // 编辑用户
-      setUsers(users.map(u => u.username === editingUser.username ? { 
-        username: editingUser.username,
-        email: editingUser.email,
-        role: userForm.role 
-      } : u));
-    } else {
-      // 新建用户
-      if (users.find(u => u.username === userForm.username)) {
-        alert("User with this username already exists");
-        return;
-      }
-      const newEmail = `${userForm.username}@horizonwatches.com`;
-      setUsers([...users, { 
-        username: userForm.username,
-        email: newEmail,
-        role: userForm.role 
-      }]);
-    }
-    setShowUserForm(false);
-    setEditingUser(null);
-    setUserForm({ username: "", password: "", role: "ADMIN" });
-  };
-
-  const handleDeleteUser = (username: string) => {
-    if (confirm("Delete this user?")) {
-      setUsers(users.filter(u => u.username !== username));
-    }
-  };
-
-  // 登录页面
-  if (!isLoggedIn) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-stone-950 via-stone-900 to-stone-800 flex items-center justify-center px-4">
-        <div className="max-w-md w-full">
-          <div className="bg-white rounded-2xl shadow-2xl p-8">
-            {/* Logo */}
-            <div className="text-center mb-8">
-              <div className="w-20 h-20 bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                <Lock className="w-10 h-10 text-white" />
-              </div>
-              <h1 className="text-2xl font-serif font-bold text-gray-900">Horizon Watches</h1>
-              <p className="text-gray-500 mt-1">Admin Workstation</p>
+  const renderDashboard = () => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-400 text-sm">{t("totalOrders")}</p>
+              <p className="text-3xl font-bold text-white">{dashboardData?.totalOrders || 0}</p>
             </div>
-
-            <form onSubmit={handleLogin} className="space-y-5">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">{t("username")}</label>
-                <input
-                  type="text"
-                  value={loginForm.username}
-                  onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all text-gray-900"
-                  placeholder="Enter username"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
-                <input
-                  type="password"
-                  value={loginForm.password}
-                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all text-gray-900"
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-
-              {loginError && (
-                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full" />
-                  {loginError}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-stone-900 text-white py-3.5 rounded-xl font-semibold hover:bg-stone-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-              >
-                {isLoading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    {t("loggingIn")}
-                  </span>
-                ) : (
-                  t("loginButton")
-                )}
-              </button>
-            </form>
-
-            {/* Security Note */}
-            <div className="mt-6 pt-4 border-t border-gray-100">
-              <p className="text-xs text-gray-400 text-center">
-                {t("authorizedOnly")}
-              </p>
+            <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+              <ShoppingCart className="w-6 h-6 text-blue-400" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-400 text-sm">{t("totalProducts")}</p>
+              <p className="text-3xl font-bold text-white">{dashboardData?.totalProducts || 0}</p>
+            </div>
+            <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+              <Package className="w-6 h-6 text-emerald-400" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-400 text-sm">{t("pendingOrders")}</p>
+              <p className="text-3xl font-bold text-amber-400">{dashboardData?.pendingOrders || 0}</p>
+            </div>
+            <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center">
+              <TrendingUp className="w-6 h-6 text-amber-400" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-400 text-sm">{t("todayRevenue")}</p>
+              <p className="text-3xl font-bold text-emerald-400">€{dashboardData?.todayRevenue?.toFixed(2) || "0.00"}</p>
+            </div>
+            <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+              <DollarSign className="w-6 h-6 text-emerald-400" />
             </div>
           </div>
         </div>
       </div>
-    );
-  }
-
-  const RoleIcon = ROLE_PERMISSIONS[currentUser!.role].icon;
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-stone-900 text-white sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
-              <Package className="w-6 h-6 text-amber-500" />
-              <h1 className="text-xl font-serif">Horizon Watches</h1>
-            </div>
-            {/* Role Badge */}
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full">
-              <RoleIcon className="w-4 h-4 text-amber-400" />
-              <span className="text-sm text-gray-200">{ROLE_PERMISSIONS[currentUser!.role].label}</span>
-            </div>
+      
+      {dashboardData && dashboardData.lowStockProducts > 0 && (
+        <div className="bg-red-500/10 border border-red-500/50 rounded-xl p-4 flex items-center gap-3">
+          <div className="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center">
+            <Package className="w-5 h-5 text-red-400" />
           </div>
-          
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-400 hidden sm:inline">{currentUser?.email}</span>
-            
-            {/* 语言切换按钮 */}
-            <button
-              onClick={toggleLanguage}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-              title={language === "en" ? "切换到中文" : "Switch to English"}
-            >
-              <Globe className="w-4 h-4" />
-              <span>{language === "en" ? "EN" : "中文"}</span>
-            </button>
-            
-            {hasPermission("settings") && (
-              <button
-                onClick={() => setView("settings")}
-                className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
-            )}
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-3 py-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">{t("logout")}</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Sidebar + Main Content */}
-      <div className="flex">
-        {/* Sidebar Navigation */}
-        <aside className="w-64 bg-white border-r border-gray-200 min-h-[calc(100vh-4rem)] sticky top-16">
-          <nav className="p-4 space-y-1">
-            {hasPermission("products") && (
-              <button
-                onClick={() => { setView("list"); setActiveTab("products"); }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-                  activeTab === "products" ? "bg-amber-50 text-amber-700" : "text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                <Package className="w-5 h-5" />
-                <span className="font-medium">{t("products")}</span>
-              </button>
-            )}
-            
-            {hasPermission("orders") && (
-              <button
-                onClick={() => { setView("orders"); setActiveTab("orders"); }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-                  activeTab === "orders" ? "bg-amber-50 text-amber-700" : "text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                <Truck className="w-5 h-5" />
-                <span className="font-medium">{t("orders")}</span>
-                {orders.length > 0 && (
-                  <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{orders.length}</span>
-                )}
-              </button>
-            )}
-            
-            {hasPermission("users") && (
-              <button
-                onClick={() => { setView("users"); setActiveTab("users"); }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-                  activeTab === "users" ? "bg-amber-50 text-amber-700" : "text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                <Users className="w-5 h-5" />
-                <span className="font-medium">{t("users")}</span>
-              </button>
-            )}
-            
-            {hasPermission("finance") && (
-              <button
-                onClick={() => { setView("finance"); setActiveTab("finance"); }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-                  activeTab === "finance" ? "bg-amber-50 text-amber-700" : "text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                <Wallet className="w-5 h-5" />
-                <span className="font-medium">{t("finance")}</span>
-              </button>
-            )}
-            
-            {hasPermission("analytics") && (
-              <button
-                onClick={() => { setView("analytics"); setActiveTab("analytics"); }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-                  activeTab === "analytics" ? "bg-amber-50 text-amber-700" : "text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                <Shield className="w-5 h-5" />
-                <span className="font-medium">{t("analytics")}</span>
-              </button>
-            )}
-          </nav>
-
-          {/* Quick Stats */}
-          <div className="p-4 border-t border-gray-200">
-            <div className="bg-gray-50 rounded-xl p-4">
-              <p className="text-xs text-gray-500 mb-2">Total Products</p>
-              <p className="text-2xl font-bold text-gray-900">{products.length}</p>
-            </div>
-          </div>
-        </aside>
-
-        {/* Main Content */}
-        <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Products View */}
-          {view === "list" && hasPermission("products") && (
-            <>
-              {/* Toolbar */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder={t("searchProducts")}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setView("add")}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-stone-900 text-white rounded-xl hover:bg-stone-800 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    {t("addProduct")}
-                  </button>
-                  <button
-                    onClick={handleExport}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
-                  >
-                    <Download className="w-4 h-4" />
-                    {t("export")}
-                  </button>
-                  <label className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer">
-                    <Upload className="w-4 h-4" />
-                    {t("import")}
-                    <input type="file" accept=".json" onChange={handleImport} className="hidden" />
-                  </label>
-                </div>
-              </div>
-
-              {/* Products Table */}
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("product")}</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("category")}</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("price")}</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("stock")}</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("actions")}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {filteredProducts.map((product) => (
-                      <tr key={product.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-                              {product.image ? (
-                                <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                              ) : (
-                                <Package className="w-6 h-6 text-gray-400" />
-                              )}
-                            </div>
-                            <div>
-                              <div className="font-medium text-gray-900">{product.name}</div>
-                              <div className="text-sm text-gray-500">ID: {product.id}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">{product.category}</td>
-                        <td className="px-6 py-4 text-sm font-semibold text-gray-900">€{product.price}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            product.stock > 10 ? "bg-green-100 text-green-700" : 
-                            product.stock > 0 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"
-                          }`}>
-                            {product.stock} {t("units")}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex gap-1">
-                            <button
-                              onClick={() => { setEditingProduct(product); setView("edit"); }}
-                              className="p-2 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => setShowDeleteConfirm(product.id)}
-                              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {filteredProducts.length === 0 && (
-                  <div className="text-center py-12 text-gray-500">
-                    {t("noProducts")}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* Orders View */}
-          {view === "orders" && hasPermission("orders") && (
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-serif">{t("orderManagement")}</h2>
-                <div className="flex gap-3">
-                  <select 
-                    value={orderFilter}
-                    onChange={(e) => setOrderFilter(e.target.value)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg"
-                  >
-                    <option value="ALL">{t("allOrders")}</option>
-                    <option value="PENDING">{t("pending")}</option>
-                    <option value="PAID">{t("paid")}</option>
-                    <option value="SHIPPED">{t("shipped")}</option>
-                    <option value="DELIVERED">{t("delivered")}</option>
-                  </select>
-                  <button
-                    onClick={fetchOrders}
-                    className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-800"
-                  >
-                    {t("refresh")}
-                  </button>
-                </div>
-              </div>
-
-              {ordersLoading ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin w-8 h-8 border-2 border-stone-900 border-t-transparent rounded-full mx-auto mb-4"></div>
-                  <p className="text-gray-500">{t("loadingOrders")}</p>
-                </div>
-              ) : ordersError ? (
-                <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-                  <Truck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2">{t("orderManagement")}</h2>
-                  <p className="text-gray-500 mb-4">{ordersError}</p>
-                  <button
-                    onClick={fetchOrders}
-                    className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-800"
-                  >
-                    {t("retry")}
-                  </button>
-                </div>
-              ) : orders.length === 0 ? (
-                <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-                  <Truck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2">{t("noOrders")}</h2>
-                  <p className="text-gray-500">{t("ordersDesc")}</p>
-                </div>
-              ) : (
-                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 border-b border-gray-200">
-                      <tr>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("orderNumber")}</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("customer")}</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("status")}</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("total")}</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("date")}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {orders
-                        .filter(order => orderFilter === "ALL" || order.status === orderFilter)
-                        .map((order) => (
-                        <tr key={order.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4">
-                            <div className="font-medium text-gray-900">{order.orderNumber}</div>
-                            <div className="text-sm text-gray-500">{order.id.slice(0, 8)}</div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="text-sm text-gray-900">{order.customerName}</div>
-                            <div className="text-sm text-gray-500">{order.customerEmail}</div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              order.status === "DELIVERED" ? "bg-green-100 text-green-700" :
-                              order.status === "SHIPPED" ? "bg-blue-100 text-blue-700" :
-                              order.status === "PAID" ? "bg-amber-100 text-amber-700" :
-                              "bg-gray-100 text-gray-700"
-                            }`}>
-                              {order.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                            €{order.total}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-500">
-                            {new Date(order.createdAt).toLocaleDateString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Product Form */}
-          {(view === "add" || view === "edit") && hasPermission("products") && (
-            <ProductForm
-              product={editingProduct}
-              onSave={handleSave}
-              onCancel={() => { setView("list"); setEditingProduct(null); }}
-              isEdit={view === "edit"}
-            />
-          )}
-
-          {/* Settings */}
-          {view === "settings" && hasPermission("settings") && (
-            <div className="max-w-3xl">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-serif">{t("walletConfig")}</h2>
-                <button 
-                  onClick={() => setView("list")} 
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* 3级钱包架构 */}
-              <div className="space-y-6">
-                {/* L1 收款钱包 */}
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Wallet className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold">{t("l1Title")}</h3>
-                      <p className="text-sm text-gray-500">{t("l1Desc")}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      {t("usdtAddress")}
-                    </label>
-                    <textarea
-                      value={walletConfig.l1Receiving}
-                      onChange={(e) => setWalletConfig({...walletConfig, l1Receiving: e.target.value})}
-                      placeholder={t("enterAddress")}
-                      rows={2}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm text-gray-900"
-                    />
-                  </div>
-                </div>
-
-                {/* L2 运营钱包 */}
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                      <Wallet className="w-5 h-5 text-amber-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold">{t("l2Title")}</h3>
-                      <p className="text-sm text-gray-500">{t("l2Desc")}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      {t("usdtAddress")}
-                    </label>
-                    <textarea
-                      value={walletConfig.l2Operating}
-                      onChange={(e) => setWalletConfig({...walletConfig, l2Operating: e.target.value})}
-                      placeholder={t("enterAddress")}
-                      rows={2}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-mono text-sm text-gray-900"
-                    />
-                  </div>
-                </div>
-
-                {/* L3 利润钱包 */}
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                      <Wallet className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold">{t("l3Title")}</h3>
-                      <p className="text-sm text-gray-500">{t("l3Desc")}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      {t("usdtAddress")}
-                    </label>
-                    <textarea
-                      value={walletConfig.l3Profit}
-                      onChange={(e) => setWalletConfig({...walletConfig, l3Profit: e.target.value})}
-                      placeholder={t("enterAddress")}
-                      rows={2}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 font-mono text-sm text-gray-900"
-                    />
-                  </div>
-                </div>
-
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                  <p className="text-sm text-amber-800">
-                    <strong>Fund Flow:</strong> L1 receives → 40% to L2 (operations) → 60% to L3 (profit)
-                  </p>
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <button
-                    onClick={() => setView("list")}
-                    className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
-                  >
-                    {t("cancel")}
-                  </button>
-                  <button
-                    onClick={saveWalletConfig}
-                    className="flex-1 px-4 py-2.5 bg-stone-900 text-white rounded-xl hover:bg-stone-800 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Save className="w-4 h-4" />
-                    {walletSaved ? t("saved") : t("saveConfig")}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-          {/* Users Management */}
-          {view === "users" && hasPermission("users") && (
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-serif">{t("userManagement")}</h2>
-                <button
-                  onClick={() => {
-                    setEditingUser(null);
-                    setUserForm({ username: "", password: "", role: "ADMIN" });
-                    setShowUserForm(true);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-stone-900 text-white rounded-xl hover:bg-stone-800 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  {t("addUser")}
-                </button>
-              </div>
-
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("username")}</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("role")}</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("permissions")}</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("actions")}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {users.length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
-                          No users created yet. Click "Add User" to create one.
-                        </td>
-                      </tr>
-                    )}
-                    {users.map((user) => (
-                      <tr key={user.username} className="hover:bg-gray-50">
-                        <td className="px-6 py-4">
-                          <div className="font-medium text-gray-900">{user.username}</div>
-                          <div className="text-sm text-gray-500">{user.email}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            user.role === "SUPERADMIN" ? "bg-purple-100 text-purple-700" :
-                            user.role === "ADMIN" ? "bg-blue-100 text-blue-700" :
-                            user.role === "SUPPLY" ? "bg-green-100 text-green-700" :
-                            "bg-orange-100 text-orange-700"
-                          }`}>
-                            {ROLE_PERMISSIONS[user.role].label}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">
-                          {ROLE_PERMISSIONS[user.role].permissions.join(", ")}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex gap-1">
-                            <button
-                              onClick={() => {
-                                setEditingUser(user);
-                                setUserForm({ username: user.username, password: "", role: user.role });
-                                setShowUserForm(true);
-                              }}
-                              className="p-2 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteUser(user.username)}
-                              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Role Reference */}
-              <div className="mt-8 bg-gray-50 rounded-xl p-6">
-                <h3 className="text-sm font-semibold text-gray-700 mb-4">{t("userRoleReference")}</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {Object.entries(ROLE_PERMISSIONS).map(([role, config]) => (
-                    <div key={role} className="bg-white rounded-lg p-4 border border-gray-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <config.icon className="w-4 h-4 text-amber-500" />
-                        <span className="font-medium text-gray-900">{config.label}</span>
-                      </div>
-                      <p className="text-xs text-gray-500">{config.permissions.join(", ")}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Finance View */}
-          {view === "finance" && hasPermission("finance") && (
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-serif">Finance Overview</h2>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => alert("Export functionality coming soon")}
-                    className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                  >
-                    Export Report
-                  </button>
-                </div>
-              </div>
-
-              {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                      <Wallet className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">{t("totalRevenue")}</p>
-                      <p className="text-2xl font-bold text-gray-900">€0.00</p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-400">{t("noOrders")}</p>
-                </div>
-
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Truck className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">{t("orders")}</p>
-                      <p className="text-2xl font-bold text-gray-900">{orders.length}</p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-400">
-                    {orders.filter(o => o.status === "PAID").length} {t("paid")}, {orders.filter(o => o.status === "PENDING").length} {t("pending")}
-                  </p>
-                </div>
-
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                      <Package className="w-5 h-5 text-amber-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">{t("products")}</p>
-                      <p className="text-2xl font-bold text-gray-900">{products.length}</p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-400">{t("inCatalog")}</p>
-                </div>
-              </div>
-
-              {/* Wallet Status */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                <h3 className="text-lg font-semibold mb-4">{t("walletStatus")}</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">{t("receivingWallet")}</p>
-                      <p className="text-sm text-gray-500 font-mono">{walletConfig.l1Receiving.slice(0, 20)}...{walletConfig.l1Receiving.slice(-8)}</p>
-                    </div>
-                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">{t("active")}</span>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">{t("operatingWallet")}</p>
-                      <p className="text-sm text-gray-500 font-mono">{walletConfig.l2Operating.slice(0, 20)}...{walletConfig.l2Operating.slice(-8)}</p>
-                    </div>
-                    <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs">{t("active")}</span>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">{t("profitWallet")}</p>
-                      <p className="text-sm text-gray-500 font-mono">{walletConfig.l3Profit.slice(0, 20)}...{walletConfig.l3Profit.slice(-8)}</p>
-                    </div>
-                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs">{t("active")}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Recent Transactions */}
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold">{t("recentTransactions")}</h3>
-                </div>
-                <div className="p-8 text-center text-gray-500">
-                  <p>{t("noTransactions")}</p>
-                  <p className="text-sm mt-2">{t("transactionsDesc")}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Analytics View */}
-          {view === "analytics" && hasPermission("analytics") && (
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-serif">{t("analyticsDashboard")}</h2>
-                <div className="flex gap-3">
-                  <select className="px-4 py-2 border border-gray-300 rounded-lg">
-                    <option>{t("last7days")}</option>
-                    <option>{t("last30days")}</option>
-                    <option>{t("last90days")}</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
-                  <p className="text-3xl font-bold text-gray-900">0</p>
-                  <p className="text-sm text-gray-500 mt-1">{t("visitors")}</p>
-                </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
-                  <p className="text-3xl font-bold text-gray-900">0%</p>
-                  <p className="text-sm text-gray-500 mt-1">{t("conversionRate")}</p>
-                </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
-                  <p className="text-3xl font-bold text-gray-900">€0.00</p>
-                  <p className="text-sm text-gray-500 mt-1">{t("avgOrderValue")}</p>
-                </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
-                  <p className="text-3xl font-bold text-gray-900">0</p>
-                  <p className="text-sm text-gray-500 mt-1">{t("pageViews")}</p>
-                </div>
-              </div>
-
-              {/* Charts Placeholder */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold mb-4">{t("salesOverview")}</h3>
-                  <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-                    <p className="text-gray-400">{t("noData")}</p>
-                  </div>
-                </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold mb-4">{t("trafficSources")}</h3>
-                  <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-                    <p className="text-gray-400">{t("noData")}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* API Status */}
-              <div className="mt-8 bg-white rounded-xl border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold mb-4">{t("systemStatus")}</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">{t("databaseConnection")}</span>
-                    <span className="flex items-center gap-2 text-green-600">
-                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                      {t("connected")}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">{t("vercelDeployment")}</span>
-                    <span className="flex items-center gap-2 text-green-600">
-                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                      {t("active")}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">{t("supabaseDatabase")}</span>
-                    <span className="flex items-center gap-2 text-green-600">
-                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                      {t("healthy")}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </main>
-      </div>
-
-      {/* User Form Modal */}
-      {showUserForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-            <h3 className="text-lg font-semibold mb-4">{editingUser ? t("editUser") : t("addUser")}</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t("username")}</label>
-                <input
-                  type="text"
-                  value={userForm.username}
-                  onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
-                  disabled={!!editingUser}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 disabled:bg-gray-100 text-gray-900"
-                  placeholder="e.g., johnsmith"
-                />
-                {!editingUser && (
-                  <p className="text-xs text-gray-500 mt-1">Email will be: {userForm.username}@horizonwatches.com</p>
-                )}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {editingUser ? "New Password (leave blank to keep current)" : "Password"}
-                </label>
-                <input
-                  type="password"
-                  value={userForm.password}
-                  onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-gray-900"
-                  placeholder={editingUser ? "••••••••" : "Enter password"}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                <select
-                  value={userForm.role}
-                  onChange={(e) => setUserForm({ ...userForm, role: e.target.value as UserRole })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-gray-900"
-                >
-                  <option value="ADMIN">Administrator</option>
-                  <option value="SUPPLY">Supply Manager</option>
-                  <option value="LOGISTICS">Logistics Manager</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowUserForm(false);
-                  setEditingUser(null);
-                  setUserForm({ username: "", password: "", role: "ADMIN" });
-                }}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveUser}
-                className="flex-1 px-4 py-2 bg-stone-900 text-white rounded-xl hover:bg-stone-800"
-              >
-                {editingUser ? "Save Changes" : "Create User"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl">
-            <h3 className="text-lg font-semibold mb-2">Delete Product?</h3>
-            <p className="text-gray-600 mb-4">This action cannot be undone.</p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(null)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDelete(showDeleteConfirm)}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700"
-              >
-                Delete
-              </button>
-            </div>
+          <div>
+            <p className="text-red-400 font-medium">{t("lowStockAlert")}</p>
+            <p className="text-red-400/70 text-sm">{dashboardData.lowStockProducts} {t("productsLowStock")}</p>
           </div>
         </div>
       )}
     </div>
   );
-}
 
-function ProductForm({ product, onSave, onCancel, isEdit }: { 
-  product: any, 
-  onSave: (p: any) => void, 
-  onCancel: () => void,
-  isEdit: boolean 
-}) {
-  const [form, setForm] = useState({
-    id: product?.id || "",
-    name: product?.name || "",
-    price: product?.price || "",
-    category: product?.category || "Heritage Collection",
-    description: product?.description || "",
-    image: product?.image || "",
-    stock: product?.stock || "50",
-    caseSize: product?.specs?.caseSize || "40mm",
-    movement: product?.specs?.movement || "Automatic",
-    strap: product?.specs?.strap || "Stainless Steel",
-    waterResistance: product?.specs?.waterResistance || "100m",
-  });
+  const renderProducts = () => (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-white">{t("products")}</h2>
+        {hasPermission("products") && (
+          <button className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 py-2 rounded-lg font-medium transition-colors">
+            <Plus className="w-4 h-4" />
+            {t("addProduct")}
+          </button>
+        )}
+      </div>
+      
+      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-slate-900/50">
+            <tr>
+              <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("product")}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("price")}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("stock")}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("status")}</th>
+              <th className="px-4 py-3 text-right text-sm font-medium text-slate-400">{t("actions")}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-700/50">
+            {products.map((product) => (
+              <tr key={product.id} className="hover:bg-slate-700/30">
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center">
+                      <Package className="w-5 h-5 text-slate-400" />
+                    </div>
+                    <span className="text-white">{product.name}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-slate-300">€{product.price}</td>
+                <td className="px-4 py-3">
+                  <span className={`${product.stock < 10 ? 'text-red-400' : 'text-slate-300'}`}>
+                    {product.stock}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <span className={`px-2 py-1 rounded-full text-xs ${product.isActive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-500/20 text-slate-400'}`}>
+                    {product.isActive ? t("active") : t("inactive")}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <button className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors">
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave({
-      id: form.id || `watch-${Date.now()}`,
-      name: form.name,
-      price: Number(form.price),
-      category: form.category,
-      description: form.description,
-      image: form.image,
-      stock: Number(form.stock),
-      specs: {
-        caseSize: form.caseSize,
-        movement: form.movement,
-        strap: form.strap,
-        waterResistance: form.waterResistance,
-      },
-    });
-  };
+  const renderOrders = () => (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-white">{t("orders")}</h2>
+      </div>
+      
+      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-slate-900/50">
+            <tr>
+              <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("orderNumber")}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("customer")}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("total")}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("status")}</th>
+              <th className="px-4 py-3 text-right text-sm font-medium text-slate-400">{t("actions")}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-700/50">
+            {orders.map((order) => (
+              <tr key={order.id} className="hover:bg-slate-700/30">
+                <td className="px-4 py-3 text-white font-medium">{order.orderNumber}</td>
+                <td className="px-4 py-3">
+                  <div>
+                    <p className="text-white">{order.customerName}</p>
+                    <p className="text-slate-400 text-sm">{order.customerEmail}</p>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-slate-300">€{order.total}</td>
+                <td className="px-4 py-3">
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    order.status === 'PENDING' ? 'bg-amber-500/20 text-amber-400' :
+                    order.status === 'SHIPPED' ? 'bg-blue-500/20 text-blue-400' :
+                    order.status === 'DELIVERED' ? 'bg-emerald-500/20 text-emerald-400' :
+                    'bg-slate-500/20 text-slate-400'
+                  }`}>
+                    {order.status}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <button className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors">
+                    <Truck className="w-4 h-4" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  const renderSettings = () => (
+    <div className="space-y-6">
+      <h2 className="text-xl font-semibold text-white">{t("settings")}</h2>
+      
+      {currentUser?.role === "SUPERADMIN" && (
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+          <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+            <Wallet className="w-5 h-5 text-amber-400" />
+            {t("walletConfiguration")}
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-400 mb-2">{t("l1ReceivingWallet")}</label>
+              <input
+                type="text"
+                value={walletConfig.l1Receiving}
+                onChange={(e) => setWalletConfig({ ...walletConfig, l1Receiving: e.target.value })}
+                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 font-mono text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-400 mb-2">{t("l2OperatingWallet")}</label>
+              <input
+                type="text"
+                value={walletConfig.l2Operating}
+                onChange={(e) => setWalletConfig({ ...walletConfig, l2Operating: e.target.value })}
+                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 font-mono text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-400 mb-2">{t("l3ProfitWallet")}</label>
+              <input
+                type="text"
+                value={walletConfig.l3Profit}
+                onChange={(e) => setWalletConfig({ ...walletConfig, l3Profit: e.target.value })}
+                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 font-mono text-sm"
+              />
+            </div>
+            <button className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 py-2 rounded-lg font-medium transition-colors">
+              <Save className="w-4 h-4" />
+              {t("saveChanges")}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  if (!isLoggedIn) return renderLogin();
+
+  const RoleIcon = currentUser ? ROLE_PERMISSIONS[currentUser.role]?.icon : Shield;
 
   return (
-    <div className="max-w-2xl">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-serif">{isEdit ? "Edit Product" : "Add Product"}</h2>
-        <button 
-          onClick={onCancel} 
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-1">Product Name</label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-gray-900"
-              placeholder="e.g., Rolex Submariner"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-1">Product ID</label>
-            <input
-              type="text"
-              value={form.id}
-              onChange={(e) => setForm({ ...form, id: e.target.value })}
-              disabled={isEdit}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 disabled:bg-gray-100 text-gray-900"
-              placeholder="e.g., submariner-black"
-            />
+    <div className="min-h-screen bg-slate-900 flex">
+      {/* Sidebar */}
+      <aside className="w-64 bg-slate-800/50 border-r border-slate-700/50 flex flex-col">
+        <div className="p-6 border-b border-slate-700/50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center">
+              <Shield className="w-5 h-5 text-slate-900" />
+            </div>
+            <div>
+              <h1 className="text-white font-semibold">Horizon Admin</h1>
+              <p className="text-slate-400 text-xs">{t("adminPanel")}</p>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-1">Price (€)</label>
-            <input
-              type="number"
-              value={form.price}
-              onChange={(e) => setForm({ ...form, price: e.target.value })}
-              required
-              min="0"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-gray-900"
-              placeholder="129"
-            />
+        <nav className="flex-1 p-4 space-y-1">
+          {hasPermission("dashboard") && (
+            <button
+              onClick={() => setActiveTab("dashboard")}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                activeTab === "dashboard" ? "bg-amber-500/20 text-amber-400" : "text-slate-400 hover:bg-slate-700/50 hover:text-white"
+              }`}
+            >
+              <BarChart3 className="w-5 h-5" />
+              {t("dashboard")}
+            </button>
+          )}
+          {hasPermission("products") && (
+            <button
+              onClick={() => setActiveTab("products")}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                activeTab === "products" ? "bg-amber-500/20 text-amber-400" : "text-slate-400 hover:bg-slate-700/50 hover:text-white"
+              }`}
+            >
+              <Package className="w-5 h-5" />
+              {t("products")}
+            </button>
+          )}
+          {hasPermission("orders") && (
+            <button
+              onClick={() => setActiveTab("orders")}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                activeTab === "orders" ? "bg-amber-500/20 text-amber-400" : "text-slate-400 hover:bg-slate-700/50 hover:text-white"
+              }`}
+            >
+              <ShoppingCart className="w-5 h-5" />
+              {t("orders")}
+            </button>
+          )}
+          {hasPermission("users") && (
+            <button
+              onClick={() => setActiveTab("users")}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                activeTab === "users" ? "bg-amber-500/20 text-amber-400" : "text-slate-400 hover:bg-slate-700/50 hover:text-white"
+              }`}
+            >
+              <Users className="w-5 h-5" />
+              {t("users")}
+            </button>
+          )}
+          {hasPermission("settings") && (
+            <button
+              onClick={() => setActiveTab("settings")}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                activeTab === "settings" ? "bg-amber-500/20 text-amber-400" : "text-slate-400 hover:bg-slate-700/50 hover:text-white"
+              }`}
+            >
+              <Settings className="w-5 h-5" />
+              {t("settings")}
+            </button>
+          )}
+        </nav>
+
+        <div className="p-4 border-t border-slate-700/50">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center">
+              <RoleIcon className="w-5 h-5 text-slate-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-medium truncate">{currentUser?.username}</p>
+              <p className="text-slate-400 text-xs">{currentUser?.role}</p>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-1">Stock</label>
-            <input
-              type="number"
-              value={form.stock}
-              onChange={(e) => setForm({ ...form, stock: e.target.value })}
-              min="0"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-gray-900"
-              placeholder="50"
-            />
+          <div className="flex gap-2">
+            <button
+              onClick={toggleLanguage}
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-slate-300 transition-colors"
+            >
+              <Globe className="w-4 h-4" />
+              {language === "en" ? "EN" : "中文"}
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center justify-center gap-2 px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
+      </aside>
 
-        <div>
-          <label className="block text-sm font-semibold text-gray-900 mb-1">Image URL</label>
-          <input
-            type="text"
-            value={form.image}
-            onChange={(e) => setForm({ ...form, image: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-gray-900"
-            placeholder="/products/image1.webp"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-semibold text-gray-900 mb-1">Description</label>
-          <textarea
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-gray-900"
-          />
-        </div>
-
-        <div className="flex gap-3 pt-4">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="flex-1 px-4 py-2.5 bg-stone-900 text-white rounded-xl hover:bg-stone-800 transition-colors flex items-center justify-center gap-2"
-          >
-            <Save className="w-4 h-4" />
-            {isEdit ? "Save Changes" : "Add Product"}
-          </button>
-        </div>
-      </form>
+      {/* Main Content */}
+      <main className="flex-1 p-8 overflow-auto">
+        {dataLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-400"></div>
+          </div>
+        ) : dataError ? (
+          <div className="bg-red-500/10 border border-red-500/50 rounded-xl p-4 text-red-400">
+            {dataError}
+          </div>
+        ) : (
+          <>
+            {activeTab === "dashboard" && renderDashboard()}
+            {activeTab === "products" && renderProducts()}
+            {activeTab === "orders" && renderOrders()}
+            {activeTab === "settings" && renderSettings()}
+            {activeTab === "users" && <div className="text-slate-400">{t("comingSoon")}</div>}
+          </>
+        )}
+      </main>
     </div>
   );
 }
