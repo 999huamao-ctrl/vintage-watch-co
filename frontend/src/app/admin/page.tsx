@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Package, Plus, Edit2, Trash2, Download, Search, Save, X, Wallet, Settings, Lock, LogOut, Users, Truck, Shield, UserCircle, Globe, BarChart3, TrendingUp, DollarSign, ShoppingCart } from "lucide-react";
+import { Package, Plus, Edit2, Trash2, Download, Search, Save, X, Wallet, Settings, Lock, LogOut, Users, Truck, Shield, UserCircle, Globe, BarChart3, TrendingUp, DollarSign, ShoppingCart, Trash } from "lucide-react";
 import { translations, Language, TranslationKey } from "./i18n";
+import ProductForm from "./ProductForm";
+import OrderDetail from "./OrderDetail";
+import UserForm from "./UserForm";
 
 type UserRole = "SUPERADMIN" | "ADMIN" | "SUPPLY" | "LOGISTICS";
 
@@ -17,28 +20,32 @@ interface User {
 interface Product {
   id: string;
   name: string;
+  nameZh?: string;
   price: number;
   originalPrice?: number;
   category: string;
   stock: number;
   isActive: boolean;
   image: string;
+  description?: string;
+  descriptionZh?: string;
   caseSize?: string;
   movement?: string;
   strap?: string;
+  waterResistance?: string;
 }
 
 interface Order {
   id: string;
   orderNumber: string;
-  status: string;
+  status: "PENDING" | "PAID" | "SHIPPED" | "DELIVERED" | "CANCELLED";
   customerName: string;
   customerEmail: string;
   total: number;
   createdAt: string;
   paymentStatus: string;
   trackingNumber?: string;
-  carrier?: string;
+  shippingCarrier?: string;
 }
 
 interface DashboardData {
@@ -228,6 +235,118 @@ export default function AdminPage() {
     }
   };
 
+  // Product CRUD
+  const handleCreateProduct = async (productData: any) => {
+    try {
+      const res = await fetch("/api/admin/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(productData),
+      });
+      if (!res.ok) throw new Error("Failed to create product");
+      await fetchProducts();
+      setShowProductForm(false);
+    } catch (err) {
+      setDataError("Failed to create product");
+    }
+  };
+
+  const handleUpdateProduct = async (productData: any) => {
+    try {
+      const res = await fetch("/api/admin/products", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...productData, id: editingProduct?.id }),
+      });
+      if (!res.ok) throw new Error("Failed to update product");
+      await fetchProducts();
+      setShowProductForm(false);
+      setEditingProduct(null);
+    } catch (err) {
+      setDataError("Failed to update product");
+    }
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    if (!confirm(t("deleteConfirm"))) return;
+    try {
+      const res = await fetch(`/api/admin/products?id=${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete product");
+      await fetchProducts();
+    } catch (err) {
+      setDataError("Failed to delete product");
+    }
+  };
+
+  // Order status update
+  const handleUpdateOrderStatus = async (orderId: string, status: string, trackingInfo?: { trackingNumber: string; shippingCarrier: string }) => {
+    try {
+      const res = await fetch("/api/admin/orders", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: orderId, status, ...trackingInfo }),
+      });
+      if (!res.ok) throw new Error("Failed to update order");
+      await fetchOrders();
+      setShowOrderDetail(false);
+      setSelectedOrder(null);
+    } catch (err) {
+      setDataError("Failed to update order status");
+    }
+  };
+
+  // User CRUD
+  const handleCreateUser = async (userData: any) => {
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(userData),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to create user");
+      }
+      await fetchUsers();
+      setShowUserForm(false);
+    } catch (err: any) {
+      setDataError(err.message || "Failed to create user");
+      throw err;
+    }
+  };
+
+  const handleUpdateUser = async (userData: any) => {
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...userData, id: editingUser?.id }),
+      });
+      if (!res.ok) throw new Error("Failed to update user");
+      await fetchUsers();
+      setShowUserForm(false);
+      setEditingUser(null);
+    } catch (err) {
+      setDataError("Failed to update user");
+      throw err;
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    if (!confirm(t("deleteConfirm"))) return;
+    try {
+      const res = await fetch(`/api/admin/users?id=${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete user");
+      await fetchUsers();
+    } catch (err) {
+      setDataError("Failed to delete user");
+    }
+  };
+
   // Login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -383,112 +502,152 @@ export default function AdminPage() {
   );
 
   const renderProducts = () => (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-white">{t("products")}</h2>
-        {hasPermission("products") && (
-          <button className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 py-2 rounded-lg font-medium transition-colors">
-            <Plus className="w-4 h-4" />
-            {t("addProduct")}
-          </button>
-        )}
-      </div>
-      
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-slate-900/50">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("product")}</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("price")}</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("stock")}</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("status")}</th>
-              <th className="px-4 py-3 text-right text-sm font-medium text-slate-400">{t("actions")}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-700/50">
-            {products.map((product) => (
-              <tr key={product.id} className="hover:bg-slate-700/30">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center">
-                      <Package className="w-5 h-5 text-slate-400" />
-                    </div>
-                    <span className="text-white">{product.name}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-slate-300">€{product.price}</td>
-                <td className="px-4 py-3">
-                  <span className={`${product.stock < 10 ? 'text-red-400' : 'text-slate-300'}`}>
-                    {product.stock}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`px-2 py-1 rounded-full text-xs ${product.isActive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-500/20 text-slate-400'}`}>
-                    {product.isActive ? t("active") : t("inactive")}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors">
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                </td>
+    <>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-white">{t("products")}</h2>
+          {hasPermission("products") && (
+            <button 
+              onClick={() => { setEditingProduct(null); setShowProductForm(true); }}
+              className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              {t("addProduct")}
+            </button>
+          )}
+        </div>
+        
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-slate-900/50">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("product")}</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("price")}</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("stock")}</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("status")}</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-slate-400">{t("actions")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-700/50">
+              {products.map((product) => (
+                <tr key={product.id} className="hover:bg-slate-700/30">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center">
+                        <Package className="w-5 h-5 text-slate-400" />
+                      </div>
+                      <span className="text-white">{product.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-slate-300">€{product.price}</td>
+                  <td className="px-4 py-3">
+                    <span className={`${product.stock < 10 ? 'text-red-400' : 'text-slate-300'}`}>
+                      {product.stock}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 rounded-full text-xs ${product.isActive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-500/20 text-slate-400'}`}>
+                      {product.isActive ? t("active") : t("inactive")}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button 
+                      onClick={() => { setEditingProduct(product); setShowProductForm(true); }}
+                      className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors mr-1"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteProduct(product.id)}
+                      className="p-2 hover:bg-red-500/20 rounded-lg text-slate-400 hover:text-red-400 transition-colors"
+                    >
+                      <Trash className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+
+      {showProductForm && (
+        <ProductForm
+          product={editingProduct}
+          onSave={editingProduct ? handleUpdateProduct : handleCreateProduct}
+          onCancel={() => { setShowProductForm(false); setEditingProduct(null); }}
+          t={t}
+        />
+      )}
+    </>
   );
 
   const renderOrders = () => (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-white">{t("orders")}</h2>
-      </div>
-      
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-slate-900/50">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("orderNumber")}</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("customer")}</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("total")}</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("status")}</th>
-              <th className="px-4 py-3 text-right text-sm font-medium text-slate-400">{t("actions")}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-700/50">
-            {orders.map((order) => (
-              <tr key={order.id} className="hover:bg-slate-700/30">
-                <td className="px-4 py-3 text-white font-medium">{order.orderNumber}</td>
-                <td className="px-4 py-3">
-                  <div>
-                    <p className="text-white">{order.customerName}</p>
-                    <p className="text-slate-400 text-sm">{order.customerEmail}</p>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-slate-300">€{order.total}</td>
-                <td className="px-4 py-3">
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    order.status === 'PENDING' ? 'bg-amber-500/20 text-amber-400' :
-                    order.status === 'SHIPPED' ? 'bg-blue-500/20 text-blue-400' :
-                    order.status === 'DELIVERED' ? 'bg-emerald-500/20 text-emerald-400' :
-                    'bg-slate-500/20 text-slate-400'
-                  }`}>
-                    {order.status}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors">
-                    <Truck className="w-4 h-4" />
-                  </button>
-                </td>
+    <>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-white">{t("orders")}</h2>
+        </div>
+        
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-slate-900/50">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("orderNumber")}</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("customer")}</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("total")}</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("status")}</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-slate-400">{t("actions")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-700/50">
+              {orders.map((order) => (
+                <tr key={order.id} className="hover:bg-slate-700/30 cursor-pointer"
+                  onClick={() => { setSelectedOrder(order); setShowOrderDetail(true); }}
+                >
+                  <td className="px-4 py-3 text-white font-medium">{order.orderNumber}</td>
+                  <td className="px-4 py-3">
+                    <div>
+                      <p className="text-white">{order.customerName}</p>
+                      <p className="text-slate-400 text-sm">{order.customerEmail}</p>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-slate-300">€{order.total}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      order.status === 'PENDING' ? 'bg-amber-500/20 text-amber-400' :
+                      order.status === 'PAID' ? 'bg-emerald-500/20 text-emerald-400' :
+                      order.status === 'SHIPPED' ? 'bg-blue-500/20 text-blue-400' :
+                      order.status === 'DELIVERED' ? 'bg-green-500/20 text-green-400' :
+                      'bg-red-500/20 text-red-400'
+                    }`}>
+                      {t(order.status.toLowerCase() as TranslationKey)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button 
+                      className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors"
+                      onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); setShowOrderDetail(true); }}
+                    >
+                      <Truck className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+
+      {showOrderDetail && selectedOrder && (
+        <OrderDetail
+          order={selectedOrder}
+          onClose={() => { setShowOrderDetail(false); setSelectedOrder(null); }}
+          onUpdateStatus={handleUpdateOrderStatus}
+          t={t}
+        />
+      )}
+    </>
   );
 
   const renderSettings = () => (
@@ -537,6 +696,88 @@ export default function AdminPage() {
         </div>
       )}
     </div>
+  );
+
+  const renderUsers = () => (
+    <>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-white">{t("userManagement")}</h2>
+          {currentUser?.role === "SUPERADMIN" && (
+            <button
+              onClick={() => { setEditingUser(null); setShowUserForm(true); }}
+              className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              {t("addUser")}
+            </button>
+          )}
+        </div>
+
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-slate-900/50">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("username")}</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("email")}</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("role")}</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("status")}</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-slate-400">{t("actions")}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-700/50">
+              {users.map((user) => (
+                <tr key={user.id} className="hover:bg-slate-700/30">
+                  <td className="px-4 py-3 text-white font-medium">{user.username}</td>
+                  <td className="px-4 py-3 text-slate-300">{user.email}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      user.role === 'SUPERADMIN' ? 'bg-purple-500/20 text-purple-400' :
+                      user.role === 'ADMIN' ? 'bg-blue-500/20 text-blue-400' :
+                      user.role === 'SUPPLY' ? 'bg-emerald-500/20 text-emerald-400' :
+                      'bg-amber-500/20 text-amber-400'
+                    }`}>
+                      {t(user.role.toLowerCase() as TranslationKey)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 rounded-full text-xs ${user.isActive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-500/20 text-slate-400'}`}>
+                      {user.isActive ? t("active") : t("inactive")}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => { setEditingUser(user); setShowUserForm(true); }}
+                      className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors mr-1"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    {currentUser?.role === "SUPERADMIN" && user.id !== currentUser.id && (
+                      <button
+                        onClick={() => handleDeleteUser(user.id)}
+                        className="p-2 hover:bg-red-500/20 rounded-lg text-slate-400 hover:text-red-400 transition-colors"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {showUserForm && (
+        <UserForm
+          user={editingUser}
+          onSave={editingUser ? handleUpdateUser : handleCreateUser}
+          onCancel={() => { setShowUserForm(false); setEditingUser(null); }}
+          t={t}
+          currentUserRole={currentUser?.role}
+        />
+      )}
+    </>
   );
 
   if (!isLoggedIn) return renderLogin();
@@ -661,7 +902,7 @@ export default function AdminPage() {
             {activeTab === "products" && renderProducts()}
             {activeTab === "orders" && renderOrders()}
             {activeTab === "settings" && renderSettings()}
-            {activeTab === "users" && <div className="text-slate-400">{t("comingSoon")}</div>}
+            {activeTab === "users" && renderUsers()}
           </>
         )}
       </main>

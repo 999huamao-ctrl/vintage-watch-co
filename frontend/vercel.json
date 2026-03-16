@@ -1,9 +1,1 @@
-{
-  "version": 2,
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "framework": "nextjs",
-  "env": {
-    "DATABASE_URL": "postgresql://postgres:f1nRQLlPBTQ9We4Y@db.qeqdtilwarajqqxtvnpx.supabase.co:5432/postgres"
-  }
-}
+{"version":2}
