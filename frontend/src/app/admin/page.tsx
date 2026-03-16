@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Package, Plus, Edit2, Trash2, Download, Upload, Search, Save, X, Wallet, Settings, Lock, LogOut, Users, Truck, Shield, UserCircle } from "lucide-react";
+import { Package, Plus, Edit2, Trash2, Download, Upload, Search, Save, X, Wallet, Settings, Lock, LogOut, Users, Truck, Shield, UserCircle, Globe } from "lucide-react";
 import { products as allProducts } from "@/lib/data";
+import { translations, Language, TranslationKey } from "./i18n";
 
 // 默认 USDT 收款地址
 const DEFAULT_USDT_ADDRESS = "TYRo5Tq9F1ZVngfTdU2heAwmpZbqsWKGXJ";
@@ -37,31 +38,46 @@ const USER_CREDENTIALS: Record<string, { email: string; password: string; role: 
   "logistics": { email: "logistics@horizonwatches.com", password: "logistics123", role: "LOGISTICS" },
 };
 
-// 权限配置
-const ROLE_PERMISSIONS: Record<UserRole, { label: string; icon: any; permissions: string[] }> = {
+// 权限配置 - 使用函数返回标签以支持多语言
+const getRolePermissions = (t: (key: TranslationKey) => string): Record<UserRole, { label: string; icon: any; permissions: string[] }> => ({
   SUPERADMIN: {
-    label: "Super Admin",
+    label: t("superadmin"),
     icon: Shield,
     permissions: ["products", "orders", "users", "settings", "finance", "analytics"],
   },
   ADMIN: {
-    label: "Administrator",
+    label: t("admin"),
     icon: UserCircle,
     permissions: ["products", "orders"],
   },
   SUPPLY: {
-    label: "Supply Manager",
+    label: t("supply"),
     icon: Package,
     permissions: ["products", "inventory"],
   },
   LOGISTICS: {
-    label: "Logistics Manager",
+    label: t("logistics"),
     icon: Truck,
     permissions: ["orders", "shipping"],
   },
-};
+});
 
 export default function AdminPage() {
+  // 语言状态
+  const [language, setLanguage] = useState<Language>("en");
+  
+  // 翻译函数
+  const t = (key: TranslationKey): string => {
+    return translations[language][key] || translations.en[key] || key;
+  };
+  
+  // 切换语言
+  const toggleLanguage = () => {
+    const newLang = language === "en" ? "zh" : "en";
+    setLanguage(newLang);
+    localStorage.setItem("admin_language", newLang);
+  };
+  
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
@@ -102,9 +118,18 @@ export default function AdminPage() {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState("");
   const [orderFilter, setOrderFilter] = useState("ALL");
+  
+  // 权限配置（组件内定义以支持多语言）
+  const ROLE_PERMISSIONS = getRolePermissions(t);
 
   // 检查登录状态
   useEffect(() => {
+    // 加载语言设置
+    const savedLang = localStorage.getItem("admin_language") as Language;
+    if (savedLang && (savedLang === "en" || savedLang === "zh")) {
+      setLanguage(savedLang);
+    }
+    
     const loggedIn = sessionStorage.getItem("admin_logged_in");
     const savedUser = sessionStorage.getItem("admin_user");
     if (loggedIn === "true" && savedUser) {
@@ -317,7 +342,7 @@ export default function AdminPage() {
 
             <form onSubmit={handleLogin} className="space-y-5">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Username</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">{t("username")}</label>
                 <input
                   type="text"
                   value={loginForm.username}
@@ -355,10 +380,10 @@ export default function AdminPage() {
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-2">
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Signing In...
+                    {t("loggingIn")}
                   </span>
                 ) : (
-                  "Sign In"
+                  t("loginButton")
                 )}
               </button>
             </form>
@@ -366,7 +391,7 @@ export default function AdminPage() {
             {/* Security Note */}
             <div className="mt-6 pt-4 border-t border-gray-100">
               <p className="text-xs text-gray-400 text-center">
-                Authorized personnel only
+                {t("authorizedOnly")}
               </p>
             </div>
           </div>
@@ -396,6 +421,17 @@ export default function AdminPage() {
           
           <div className="flex items-center gap-3">
             <span className="text-sm text-gray-400 hidden sm:inline">{currentUser?.email}</span>
+            
+            {/* 语言切换按钮 */}
+            <button
+              onClick={toggleLanguage}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              title={language === "en" ? "切换到中文" : "Switch to English"}
+            >
+              <Globe className="w-4 h-4" />
+              <span>{language === "en" ? "EN" : "中文"}</span>
+            </button>
+            
             {hasPermission("settings") && (
               <button
                 onClick={() => setView("settings")}
@@ -409,7 +445,7 @@ export default function AdminPage() {
               className="flex items-center gap-2 px-3 py-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
             >
               <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Logout</span>
+              <span className="hidden sm:inline">{t("logout")}</span>
             </button>
           </div>
         </div>
@@ -428,7 +464,7 @@ export default function AdminPage() {
                 }`}
               >
                 <Package className="w-5 h-5" />
-                <span className="font-medium">Products</span>
+                <span className="font-medium">{t("products")}</span>
               </button>
             )}
             
@@ -440,7 +476,7 @@ export default function AdminPage() {
                 }`}
               >
                 <Truck className="w-5 h-5" />
-                <span className="font-medium">Orders</span>
+                <span className="font-medium">{t("orders")}</span>
                 {orders.length > 0 && (
                   <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{orders.length}</span>
                 )}
@@ -455,7 +491,7 @@ export default function AdminPage() {
                 }`}
               >
                 <Users className="w-5 h-5" />
-                <span className="font-medium">Users</span>
+                <span className="font-medium">{t("users")}</span>
               </button>
             )}
             
@@ -467,7 +503,7 @@ export default function AdminPage() {
                 }`}
               >
                 <Wallet className="w-5 h-5" />
-                <span className="font-medium">Finance</span>
+                <span className="font-medium">{t("finance")}</span>
               </button>
             )}
             
@@ -479,7 +515,7 @@ export default function AdminPage() {
                 }`}
               >
                 <Shield className="w-5 h-5" />
-                <span className="font-medium">Analytics</span>
+                <span className="font-medium">{t("analytics")}</span>
               </button>
             )}
           </nav>
@@ -504,7 +540,7 @@ export default function AdminPage() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search products..."
+                    placeholder={t("searchProducts")}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
@@ -516,18 +552,18 @@ export default function AdminPage() {
                     className="flex items-center gap-2 px-4 py-2.5 bg-stone-900 text-white rounded-xl hover:bg-stone-800 transition-colors"
                   >
                     <Plus className="w-4 h-4" />
-                    Add Product
+                    {t("addProduct")}
                   </button>
                   <button
                     onClick={handleExport}
                     className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
                   >
                     <Download className="w-4 h-4" />
-                    Export
+                    {t("export")}
                   </button>
                   <label className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer">
                     <Upload className="w-4 h-4" />
-                    Import
+                    {t("import")}
                     <input type="file" accept=".json" onChange={handleImport} className="hidden" />
                   </label>
                 </div>
@@ -538,11 +574,11 @@ export default function AdminPage() {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Product</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Category</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Price</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Stock</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("product")}</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("category")}</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("price")}</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("stock")}</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("actions")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -570,7 +606,7 @@ export default function AdminPage() {
                             product.stock > 10 ? "bg-green-100 text-green-700" : 
                             product.stock > 0 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"
                           }`}>
-                            {product.stock} units
+                            {product.stock} {t("units")}
                           </span>
                         </td>
                         <td className="px-6 py-4">
@@ -595,7 +631,7 @@ export default function AdminPage() {
                 </table>
                 {filteredProducts.length === 0 && (
                   <div className="text-center py-12 text-gray-500">
-                    No products found
+                    {t("noProducts")}
                   </div>
                 )}
               </div>
@@ -606,24 +642,24 @@ export default function AdminPage() {
           {view === "orders" && hasPermission("orders") && (
             <div>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-serif">Orders Management</h2>
+                <h2 className="text-2xl font-serif">{t("orderManagement")}</h2>
                 <div className="flex gap-3">
                   <select 
                     value={orderFilter}
                     onChange={(e) => setOrderFilter(e.target.value)}
                     className="px-4 py-2 border border-gray-300 rounded-lg"
                   >
-                    <option value="ALL">All Orders</option>
-                    <option value="PENDING">Pending</option>
-                    <option value="PAID">Paid</option>
-                    <option value="SHIPPED">Shipped</option>
-                    <option value="DELIVERED">Delivered</option>
+                    <option value="ALL">{t("allOrders")}</option>
+                    <option value="PENDING">{t("pending")}</option>
+                    <option value="PAID">{t("paid")}</option>
+                    <option value="SHIPPED">{t("shipped")}</option>
+                    <option value="DELIVERED">{t("delivered")}</option>
                   </select>
                   <button
                     onClick={fetchOrders}
                     className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-800"
                   >
-                    Refresh
+                    {t("refresh")}
                   </button>
                 </div>
               </div>
@@ -631,36 +667,36 @@ export default function AdminPage() {
               {ordersLoading ? (
                 <div className="text-center py-12">
                   <div className="animate-spin w-8 h-8 border-2 border-stone-900 border-t-transparent rounded-full mx-auto mb-4"></div>
-                  <p className="text-gray-500">Loading orders...</p>
+                  <p className="text-gray-500">{t("loadingOrders")}</p>
                 </div>
               ) : ordersError ? (
                 <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
                   <Truck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2">Orders Management</h2>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">{t("orderManagement")}</h2>
                   <p className="text-gray-500 mb-4">{ordersError}</p>
                   <button
                     onClick={fetchOrders}
                     className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-800"
                   >
-                    Retry
+                    {t("retry")}
                   </button>
                 </div>
               ) : orders.length === 0 ? (
                 <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
                   <Truck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2">No Orders Yet</h2>
-                  <p className="text-gray-500">Orders will appear here when customers make purchases.</p>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">{t("noOrders")}</h2>
+                  <p className="text-gray-500">{t("ordersDesc")}</p>
                 </div>
               ) : (
                 <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                   <table className="w-full">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Order</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Customer</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Total</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("orderNumber")}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("customer")}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("status")}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("total")}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("date")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -715,7 +751,7 @@ export default function AdminPage() {
           {view === "settings" && hasPermission("settings") && (
             <div className="max-w-3xl">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-serif">Wallet Configuration</h2>
+                <h2 className="text-2xl font-serif">{t("walletConfig")}</h2>
                 <button 
                   onClick={() => setView("list")} 
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -733,18 +769,18 @@ export default function AdminPage() {
                       <Wallet className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold">Level 1: Receiving Wallet</h3>
-                      <p className="text-sm text-gray-500">Customer payments come here</p>
+                      <h3 className="text-lg font-semibold">{t("l1Title")}</h3>
+                      <p className="text-sm text-gray-500">{t("l1Desc")}</p>
                     </div>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      USDT Address (TRC20)
+                      {t("usdtAddress")}
                     </label>
                     <textarea
                       value={walletConfig.l1Receiving}
                       onChange={(e) => setWalletConfig({...walletConfig, l1Receiving: e.target.value})}
-                      placeholder="Enter TRC20 receiving address"
+                      placeholder={t("enterAddress")}
                       rows={2}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm text-gray-900"
                     />
@@ -758,18 +794,18 @@ export default function AdminPage() {
                       <Wallet className="w-5 h-5 text-amber-600" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold">Level 2: Operating Wallet</h3>
-                      <p className="text-sm text-gray-500">40% for ads, logistics, operations</p>
+                      <h3 className="text-lg font-semibold">{t("l2Title")}</h3>
+                      <p className="text-sm text-gray-500">{t("l2Desc")}</p>
                     </div>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      USDT Address (TRC20)
+                      {t("usdtAddress")}
                     </label>
                     <textarea
                       value={walletConfig.l2Operating}
                       onChange={(e) => setWalletConfig({...walletConfig, l2Operating: e.target.value})}
-                      placeholder="Enter TRC20 operating address"
+                      placeholder={t("enterAddress")}
                       rows={2}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-mono text-sm text-gray-900"
                     />
@@ -783,18 +819,18 @@ export default function AdminPage() {
                       <Wallet className="w-5 h-5 text-green-600" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold">Level 3: Profit Wallet</h3>
-                      <p className="text-sm text-gray-500">60% profit - STAR&apos;s wallet</p>
+                      <h3 className="text-lg font-semibold">{t("l3Title")}</h3>
+                      <p className="text-sm text-gray-500">{t("l3Desc")}</p>
                     </div>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      USDT Address (TRC20)
+                      {t("usdtAddress")}
                     </label>
                     <textarea
                       value={walletConfig.l3Profit}
                       onChange={(e) => setWalletConfig({...walletConfig, l3Profit: e.target.value})}
-                      placeholder="Enter TRC20 profit address"
+                      placeholder={t("enterAddress")}
                       rows={2}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 font-mono text-sm text-gray-900"
                     />
@@ -812,14 +848,14 @@ export default function AdminPage() {
                     onClick={() => setView("list")}
                     className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
                   >
-                    Cancel
+                    {t("cancel")}
                   </button>
                   <button
                     onClick={saveWalletConfig}
                     className="flex-1 px-4 py-2.5 bg-stone-900 text-white rounded-xl hover:bg-stone-800 transition-colors flex items-center justify-center gap-2"
                   >
                     <Save className="w-4 h-4" />
-                    {walletSaved ? "Saved!" : "Save Configuration"}
+                    {walletSaved ? t("saved") : t("saveConfig")}
                   </button>
                 </div>
               </div>
@@ -829,7 +865,7 @@ export default function AdminPage() {
           {view === "users" && hasPermission("users") && (
             <div>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-serif">User Management</h2>
+                <h2 className="text-2xl font-serif">{t("userManagement")}</h2>
                 <button
                   onClick={() => {
                     setEditingUser(null);
@@ -839,7 +875,7 @@ export default function AdminPage() {
                   className="flex items-center gap-2 px-4 py-2.5 bg-stone-900 text-white rounded-xl hover:bg-stone-800 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
-                  Add User
+                  {t("addUser")}
                 </button>
               </div>
 
@@ -847,10 +883,10 @@ export default function AdminPage() {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Username</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Role</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Permissions</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("username")}</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("role")}</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("permissions")}</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t("actions")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -908,7 +944,7 @@ export default function AdminPage() {
 
               {/* Role Reference */}
               <div className="mt-8 bg-gray-50 rounded-xl p-6">
-                <h3 className="text-sm font-semibold text-gray-700 mb-4">Role Permissions Reference</h3>
+                <h3 className="text-sm font-semibold text-gray-700 mb-4">{t("userRoleReference")}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   {Object.entries(ROLE_PERMISSIONS).map(([role, config]) => (
                     <div key={role} className="bg-white rounded-lg p-4 border border-gray-200">
@@ -947,11 +983,11 @@ export default function AdminPage() {
                       <Wallet className="w-5 h-5 text-green-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Total Revenue</p>
+                      <p className="text-sm text-gray-500">{t("totalRevenue")}</p>
                       <p className="text-2xl font-bold text-gray-900">€0.00</p>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-400">No orders yet</p>
+                  <p className="text-xs text-gray-400">{t("noOrders")}</p>
                 </div>
 
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -960,12 +996,12 @@ export default function AdminPage() {
                       <Truck className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Orders</p>
+                      <p className="text-sm text-gray-500">{t("orders")}</p>
                       <p className="text-2xl font-bold text-gray-900">{orders.length}</p>
                     </div>
                   </div>
                   <p className="text-xs text-gray-400">
-                    {orders.filter(o => o.status === "PAID").length} paid, {orders.filter(o => o.status === "PENDING").length} pending
+                    {orders.filter(o => o.status === "PAID").length} {t("paid")}, {orders.filter(o => o.status === "PENDING").length} {t("pending")}
                   </p>
                 </div>
 
@@ -975,38 +1011,38 @@ export default function AdminPage() {
                       <Package className="w-5 h-5 text-amber-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Products</p>
+                      <p className="text-sm text-gray-500">{t("products")}</p>
                       <p className="text-2xl font-bold text-gray-900">{products.length}</p>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-400">In catalog</p>
+                  <p className="text-xs text-gray-400">{t("inCatalog")}</p>
                 </div>
               </div>
 
               {/* Wallet Status */}
               <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                <h3 className="text-lg font-semibold mb-4">Wallet Status</h3>
+                <h3 className="text-lg font-semibold mb-4">{t("walletStatus")}</h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div>
-                      <p className="font-medium text-gray-900">L1 - Receiving Wallet</p>
+                      <p className="font-medium text-gray-900">{t("receivingWallet")}</p>
                       <p className="text-sm text-gray-500 font-mono">{walletConfig.l1Receiving.slice(0, 20)}...{walletConfig.l1Receiving.slice(-8)}</p>
                     </div>
-                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">Active</span>
+                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">{t("active")}</span>
                   </div>
                   <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div>
-                      <p className="font-medium text-gray-900">L2 - Operating Wallet</p>
+                      <p className="font-medium text-gray-900">{t("operatingWallet")}</p>
                       <p className="text-sm text-gray-500 font-mono">{walletConfig.l2Operating.slice(0, 20)}...{walletConfig.l2Operating.slice(-8)}</p>
                     </div>
-                    <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs">Active</span>
+                    <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs">{t("active")}</span>
                   </div>
                   <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div>
-                      <p className="font-medium text-gray-900">L3 - Profit Wallet</p>
+                      <p className="font-medium text-gray-900">{t("profitWallet")}</p>
                       <p className="text-sm text-gray-500 font-mono">{walletConfig.l3Profit.slice(0, 20)}...{walletConfig.l3Profit.slice(-8)}</p>
                     </div>
-                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs">Active</span>
+                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs">{t("active")}</span>
                   </div>
                 </div>
               </div>
@@ -1014,11 +1050,11 @@ export default function AdminPage() {
               {/* Recent Transactions */}
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold">Recent Transactions</h3>
+                  <h3 className="text-lg font-semibold">{t("recentTransactions")}</h3>
                 </div>
                 <div className="p-8 text-center text-gray-500">
-                  <p>No transactions recorded yet.</p>
-                  <p className="text-sm mt-2">Transactions will appear when orders are placed.</p>
+                  <p>{t("noTransactions")}</p>
+                  <p className="text-sm mt-2">{t("transactionsDesc")}</p>
                 </div>
               </div>
             </div>
@@ -1028,12 +1064,12 @@ export default function AdminPage() {
           {view === "analytics" && hasPermission("analytics") && (
             <div>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-serif">Analytics Dashboard</h2>
+                <h2 className="text-2xl font-serif">{t("analyticsDashboard")}</h2>
                 <div className="flex gap-3">
                   <select className="px-4 py-2 border border-gray-300 rounded-lg">
-                    <option>Last 7 days</option>
-                    <option>Last 30 days</option>
-                    <option>Last 90 days</option>
+                    <option>{t("last7days")}</option>
+                    <option>{t("last30days")}</option>
+                    <option>{t("last90days")}</option>
                   </select>
                 </div>
               </div>
@@ -1042,61 +1078,61 @@ export default function AdminPage() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
                   <p className="text-3xl font-bold text-gray-900">0</p>
-                  <p className="text-sm text-gray-500 mt-1">Visitors</p>
+                  <p className="text-sm text-gray-500 mt-1">{t("visitors")}</p>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
                   <p className="text-3xl font-bold text-gray-900">0%</p>
-                  <p className="text-sm text-gray-500 mt-1">Conversion Rate</p>
+                  <p className="text-sm text-gray-500 mt-1">{t("conversionRate")}</p>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
                   <p className="text-3xl font-bold text-gray-900">€0.00</p>
-                  <p className="text-sm text-gray-500 mt-1">Avg Order Value</p>
+                  <p className="text-sm text-gray-500 mt-1">{t("avgOrderValue")}</p>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
                   <p className="text-3xl font-bold text-gray-900">0</p>
-                  <p className="text-sm text-gray-500 mt-1">Page Views</p>
+                  <p className="text-sm text-gray-500 mt-1">{t("pageViews")}</p>
                 </div>
               </div>
 
               {/* Charts Placeholder */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold mb-4">Sales Overview</h3>
+                  <h3 className="text-lg font-semibold mb-4">{t("salesOverview")}</h3>
                   <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-                    <p className="text-gray-400">No data available yet</p>
+                    <p className="text-gray-400">{t("noData")}</p>
                   </div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold mb-4">Traffic Sources</h3>
+                  <h3 className="text-lg font-semibold mb-4">{t("trafficSources")}</h3>
                   <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-                    <p className="text-gray-400">No data available yet</p>
+                    <p className="text-gray-400">{t("noData")}</p>
                   </div>
                 </div>
               </div>
 
               {/* API Status */}
               <div className="mt-8 bg-white rounded-xl border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold mb-4">System Status</h3>
+                <h3 className="text-lg font-semibold mb-4">{t("systemStatus")}</h3>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Database Connection</span>
+                    <span className="text-gray-600">{t("databaseConnection")}</span>
                     <span className="flex items-center gap-2 text-green-600">
                       <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                      Connected
+                      {t("connected")}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Vercel Deployment</span>
+                    <span className="text-gray-600">{t("vercelDeployment")}</span>
                     <span className="flex items-center gap-2 text-green-600">
                       <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                      Active
+                      {t("active")}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Supabase Database</span>
+                    <span className="text-gray-600">{t("supabaseDatabase")}</span>
                     <span className="flex items-center gap-2 text-green-600">
                       <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                      Healthy
+                      {t("healthy")}
                     </span>
                   </div>
                 </div>
@@ -1110,11 +1146,11 @@ export default function AdminPage() {
       {showUserForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-            <h3 className="text-lg font-semibold mb-4">{editingUser ? "Edit User" : "Add New User"}</h3>
+            <h3 className="text-lg font-semibold mb-4">{editingUser ? t("editUser") : t("addUser")}</h3>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("username")}</label>
                 <input
                   type="text"
                   value={userForm.username}

@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "buildCommand": "cd frontend && npm run build",
-  "outputDirectory": "frontend/.next",
+  "buildCommand": "bash vercel-build.sh",
+  "outputDirectory": ".next",
   "framework": "nextjs",
-  "rewrites": [
-    { "source": "/admin", "destination": "/frontend/admin" }
-  ]
+  "env": {
+    "DATABASE_URL": "postgresql://postgres:f1nRQLlPBTQ9We4Y@db.qeqdtilwarajqqxtvnpx.supabase.co:5432/postgres"
+  }
 }

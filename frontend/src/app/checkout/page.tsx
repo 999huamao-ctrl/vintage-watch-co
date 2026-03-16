@@ -5,11 +5,14 @@ import { useLanguage } from "@/lib/language";
 import { shippingRates, freeShippingThreshold } from "@/lib/data";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ChevronLeft, Lock, Truck, Copy, CheckCircle, Wallet, AlertCircle, Loader2, Search } from "lucide-react";
+import { ChevronLeft, Lock, Truck, Copy, CheckCircle, Wallet, AlertCircle, Loader2, Search, CreditCard } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { isCreemProductConfigured } from "@/lib/creem-products";
 
 const USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
 const DEFAULT_USDT_ADDRESS = "TGPBhfjSuwjrfGUtdqt6EZUbzhbRCGfC5c";
+
+type PaymentMethod = 'usdt' | 'card';
 
 function getUSDTAddress(): string {
   if (typeof window === 'undefined') return DEFAULT_USDT_ADDRESS;
@@ -32,6 +35,11 @@ export default function CheckoutPage() {
   const [txidError, setTxidError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState<"idle" | "success" | "error">("idle");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('usdt');
+  const [isCreemLoading, setIsCreemLoading] = useState(false);
+  const [creemEnabled, setCreemEnabled] = useState(false);
+  const [creemProductsConfigured, setCreemProductsConfigured] = useState(false);
+  
   const [formData, setFormData] = useState({
     email: "",
     firstName: "",
@@ -43,7 +51,16 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     setUsdtAddress(getUSDTAddress());
-  }, []);
+    // 检查 CREEM 是否已配置 - 通过 API
+    fetch('/api/creem/status')
+      .then(res => res.json())
+      .then(data => setCreemEnabled(data.configured))
+      .catch(() => setCreemEnabled(false));
+    
+    // 检查购物车商品是否已配置 CREEM Product ID
+    const allConfigured = items.every(item => isCreemProductConfigured(item.product.id));
+    setCreemProductsConfigured(allConfigured);
+  }, [items]);
 
   const subtotal = getTotalPrice();
   const shipping = subtotal >= freeShippingThreshold ? 0 : (shippingRates[country]?.rate || 10);
@@ -53,10 +70,6 @@ export default function CheckoutPage() {
   const validateTxid = (value: string): boolean => {
     const txidRegex = /^[0-9a-fA-F]{64}$/;
     return txidRegex.test(value.trim());
-  };
-
-  const handleOrderComplete = () => {
-    setShowTxidInput(true);
   };
 
   const handleCopyAddress = async () => {
@@ -83,7 +96,63 @@ export default function CheckoutPage() {
     }
   };
 
-  const verifyPayment = async () => {
+  const handleCreemCheckout = async () => {
+    if (!formData.email || !formData.firstName || !formData.lastName) {
+      setError(t('checkout.fillRequired'));
+      return;
+    }
+
+    setIsCreemLoading(true);
+    setError("");
+
+    try {
+      const orderId = `ORD-${Date.now()}`;
+      
+      const response = await fetch('/api/creem/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: items.map(item => ({
+            id: item.product.id,
+            name: item.product.name,
+            price: item.product.price,
+            quantity: item.quantity,
+            description: item.product.description,
+          })),
+          customer: {
+            email: formData.email,
+            name: `${formData.firstName} ${formData.lastName}`,
+          },
+          orderId,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create checkout');
+      }
+
+      const { checkoutUrl } = await response.json();
+      
+      // 保存订单信息到 localStorage（用于支付成功后的处理）
+      localStorage.setItem('pending_order', JSON.stringify({
+        orderId,
+        items,
+        total: totalEUR,
+        customer: formData,
+        paymentMethod: 'creem',
+      }));
+      
+      // 跳转到 CREEM 结账页
+      window.location.href = checkoutUrl;
+    } catch (err: any) {
+      setError(err.message || t('checkout.creemError'));
+    } finally {
+      setIsCreemLoading(false);
+    }
+  };
+
+  const handleConfirmPayment = async () => {
     if (!validateTxid(txid)) {
       setTxidError(t('checkout.txidError'));
       return;
@@ -98,23 +167,32 @@ export default function CheckoutPage() {
       const data = await response.json();
       if (!data.data || data.data.length === 0) throw new Error(t('checkout.verificationFailed'));
       
-      const transferEvent = data.data.find((event: any) => 
-        event.contract_address === USDT_CONTRACT && event.event_name === "Transfer"
+      const events = data.data;
+      const transferEvent = events.find((e: any) => 
+        e.event_name === 'Transfer' && 
+        e.contract_address === USDT_CONTRACT
       );
-      if (!transferEvent) throw new Error(t('checkout.verificationFailed'));
 
-      const { to, value } = transferEvent.result;
-      const receivedAmount = parseInt(value) / 1e6;
-      const expectedAddress = usdtAddress.toLowerCase().replace(/^0x/, '');
-      const actualToAddress = to.toLowerCase().replace(/^0x/, '');
-      const addressMatch = actualToAddress === expectedAddress || actualToAddress.slice(-32) === expectedAddress.slice(-32);
-      
-      if (!addressMatch) throw new Error(t('checkout.verificationFailed'));
-      const tolerance = totalUSDT * 0.1;
-      if (receivedAmount < totalUSDT - tolerance) throw new Error(t('checkout.verificationFailed'));
+      if (!transferEvent) throw new Error(t('checkout.notUSDT'));
+
+      const { from, to, value } = transferEvent.result;
+      const amount = parseInt(value) / 1_000_000;
+
+      if (to.toLowerCase() !== usdtAddress.toLowerCase()) {
+        throw new Error(t('checkout.wrongAddress'));
+      }
+
+      const expectedAmount = totalUSDT;
+      const tolerance = 0.5;
+      if (Math.abs(amount - expectedAmount) > tolerance) {
+        throw new Error(`${t('checkout.wrongAmount')} ${amount} USDT`);
+      }
 
       setVerificationResult("success");
-      await completeOrder(txid.trim(), receivedAmount);
+      setTimeout(() => {
+        clearCart();
+        window.location.href = `/success?txid=${txid}&amount=${amount}`;
+      }, 1500);
     } catch (err: any) {
       setError(err.message || t('checkout.verificationFailed'));
       setVerificationResult("error");
@@ -123,153 +201,100 @@ export default function CheckoutPage() {
     }
   };
 
-  const completeOrder = async (verifiedTxid: string, receivedAmount: number) => {
-    const order = {
-      id: `ORD-${Date.now()}`,
-      customer: {
-        name: `${formData.firstName} ${formData.lastName}`,
-        email: formData.email,
-        address: formData.address,
-        city: formData.city,
-        postalCode: formData.postalCode,
-        country: country,
-      },
-      items: items.map((item: any) => ({
-        productId: item.product.id,
-        name: item.product.name,
-        price: item.product.price,
-        quantity: item.quantity,
-      })),
-      total: totalEUR,
-      totalUSDT: totalUSDT,
-      receivedUSDT: receivedAmount,
-      status: "paid",
-      txid: verifiedTxid,
-      verifiedAt: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-    };
-    const existingOrders = JSON.parse(localStorage.getItem("admin_orders") || "[]");
-    existingOrders.unshift(order);
-    localStorage.setItem("admin_orders", JSON.stringify(existingOrders));
-    setTimeout(() => {
-      clearCart();
-      window.location.href = "/success?verified=true";
-    }, 2000);
+  const handleUSDTOrderComplete = () => {
+    setShowTxidInput(true);
   };
-
-  const handleConfirmPayment = () => verifyPayment();
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 py-16 px-4">
+      <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="max-w-md mx-auto text-center pt-16">
-          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Wallet className="w-10 h-10 text-gray-800" />
-          </div>
-          <h1 className="text-2xl font-semibold mb-3">{t('checkout.cartEmpty')}</h1>
-          <Link href="/" className="inline-flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-lg hover:bg-stone-800 transition-colors">
-            {t('checkout.continueShopping')}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
+          <h1 className="text-3xl font-serif mb-4">{t('checkout.title')}</h1>
+          <p className="text-gray-600 mb-8">{t('cart.empty')}</p>
+          <Link href="/shop" className="inline-block bg-stone-900 text-white px-8 py-3 rounded-lg hover:bg-stone-800 transition-colors">
+            {t('cart.continueShopping')}
           </Link>
         </div>
       </div>
     );
   }
 
-  const isFormComplete = formData.email && formData.firstName && formData.lastName && 
-                         formData.address && formData.city && formData.postalCode;
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      
-      <header className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-stone-800 hover:text-stone-900">
-            <ChevronLeft className="w-5 h-5" />
-            <span className="font-medium">{t('checkout.continueShopping')}</span>
-          </Link>
-          <span className="text-lg font-serif font-medium">HØRIZON</span>
-          <div className="flex items-center gap-2 text-sm text-gray-900">
-            <Lock className="w-4 h-4" />
-            <span>{t('checkout.title')}</span>
-          </div>
-        </div>
-      </header>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Link href="/shop" className="inline-flex items-center text-stone-900 hover:text-stone-600 mb-8 transition-colors">
+          <ChevronLeft className="w-5 h-5 mr-1" />
+          {t('checkout.backToShop')}
+        </Link>
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-7">
             <section className="bg-white rounded-xl border shadow-sm mb-6">
-              <div className="p-6 border-b bg-gray-50/50 rounded-t-xl">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center font-medium">1</div>
-                  <h2 className="text-lg font-semibold">{t('checkout.contactInfo')}</h2>
-                </div>
+              <div className="p-6 border-b">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Lock className="w-5 h-5" />
+                  {t('checkout.contactInfo')}
+                </h2>
               </div>
-              <div className="p-6">
+              <div className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">{t('checkout.email')} *</label>
-                  <input type="email" required value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-lg focus:outline-none focus:border-stone-900 text-gray-900"
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">{t('checkout.email')}</label>
+                  <input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-gray-900"
+                    placeholder="your@email.com"
                   />
                 </div>
               </div>
             </section>
 
             <section className="bg-white rounded-xl border shadow-sm mb-6">
-              <div className="p-6 border-b bg-gray-50/50 rounded-t-xl">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center font-medium">2</div>
-                  <h2 className="text-lg font-semibold">{t('checkout.shipping')}</h2>
-                </div>
+              <div className="p-6 border-b">
+                <h2 className="text-lg font-semibold">{t('checkout.shippingAddress')}</h2>
               </div>
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">{t('checkout.country')} *</label>
-                    <select value={country} onChange={(e) => setCountry(e.target.value)}
-                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-lg focus:outline-none focus:border-stone-900 text-gray-900"
-                    >
-                      {Object.entries(shippingRates).map(([code, { name }]) => (
-                        <option key={code} value={code}>{name}</option>
-                      ))}
-                    </select>
-                  </div>
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">{t('checkout.firstName')} *</label>
-                    <input type="text" required value={formData.firstName}
-                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-lg focus:outline-none focus:border-stone-900 text-gray-900"
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">{t('checkout.firstName')}</label>
+                    <input type="text" value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-gray-900"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">{t('checkout.lastName')} *</label>
-                    <input type="text" required value={formData.lastName}
-                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-lg focus:outline-none focus:border-stone-900 text-gray-900"
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">{t('checkout.lastName')}</label>
+                    <input type="text" value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-gray-900"
                     />
                   </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">{t('checkout.address')} *</label>
-                    <input type="text" required value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-lg focus:outline-none focus:border-stone-900 text-gray-900"
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">{t('checkout.country')}</label>
+                  <select value={country} onChange={(e) => setCountry(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-gray-900"
+                  >
+                    {Object.entries(shippingRates).map(([code, info]) => (
+                      <option key={code} value={code}>{info.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">{t('checkout.address')}</label>
+                  <input type="text" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-gray-900"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">{t('checkout.city')}</label>
+                    <input type="text" value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-gray-900"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">{t('checkout.city')} *</label>
-                    <input type="text" required value={formData.city}
-                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-lg focus:outline-none focus:border-stone-900 text-gray-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">{t('checkout.postalCode')} *</label>
-                    <input type="text" required value={formData.postalCode}
-                      onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-lg focus:outline-none focus:border-stone-900 text-gray-900"
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">{t('checkout.postalCode')}</label>
+                    <input type="text" value={formData.postalCode} onChange={(e) => setFormData({...formData, postalCode: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-gray-900"
                     />
                   </div>
                 </div>
@@ -277,28 +302,57 @@ export default function CheckoutPage() {
             </section>
 
             <section className="bg-white rounded-xl border shadow-sm">
-              <div className="p-6 border-b bg-gray-50/50 rounded-t-xl">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center font-medium">3</div>
-                  <h2 className="text-lg font-semibold">{t('checkout.payment')}</h2>
-                </div>
+              <div className="p-6 border-b">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Wallet className="w-5 h-5" />
+                  {t('checkout.paymentMethod')}
+                </h2>
               </div>
               <div className="p-6">
+                {/* Payment Method Selection */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <button
+                    onClick={() => setPaymentMethod('usdt')}
+                    className={`p-4 border-2 rounded-xl text-center transition-colors ${
+                      paymentMethod === 'usdt' 
+                        ? 'border-stone-900 bg-stone-50' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <Wallet className={`w-8 h-8 mx-auto mb-2 ${paymentMethod === 'usdt' ? 'text-stone-900' : 'text-gray-400'}`} />
+                    <p className="font-semibold text-gray-900">USDT (TRC20)</p>
+                    <p className="text-sm text-gray-500">Crypto Payment</p>
+                  </button>
+                  
+                  <button
+                    onClick={() => setPaymentMethod('card')}
+                    disabled={!creemEnabled || !creemProductsConfigured}
+                    className={`p-4 border-2 rounded-xl text-center transition-colors ${
+                      paymentMethod === 'card' 
+                        ? 'border-stone-900 bg-stone-50' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    } ${(!creemEnabled || !creemProductsConfigured) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <CreditCard className={`w-8 h-8 mx-auto mb-2 ${paymentMethod === 'card' ? 'text-stone-900' : 'text-gray-400'}`} />
+                    <p className="font-semibold text-gray-900">Credit Card</p>
+                    <p className="text-sm text-gray-500">
+                      {!creemEnabled 
+                        ? 'Coming Soon' 
+                        : !creemProductsConfigured 
+                          ? 'Setup Required' 
+                          : 'Powered by CREEM'}
+                    </p>
+                  </button>
+                </div>
+
                 {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                    <p className="text-red-800">{error}</p>
+                  </div>
                 )}
 
-                {!isFormComplete ? (
-                  <div className="text-center py-8 text-gray-900">
-                    <Wallet className="w-12 h-12 mx-auto mb-3 text-gray-800" />
-                    <p>{t('checkout.completeShipping')}</p>
-                  </div>
-                ) : !usdtAddress ? (
-                  <div className="text-center py-8 text-amber-600 bg-amber-50 rounded-lg">
-                    <AlertCircle className="w-12 h-12 mx-auto mb-3" />
-                    <p>{t('checkout.notConfigured')}</p>
-                  </div>
-                ) : (
+                {/* USDT Payment Flow */}
+                {paymentMethod === 'usdt' && (
                   <div className="space-y-6">
                     <div className="bg-stone-900 text-white rounded-xl p-6">
                       <div className="text-center">
@@ -324,7 +378,7 @@ export default function CheckoutPage() {
                     {!showTxidInput ? (
                       <>
                         <p className="text-sm text-gray-600">{t('checkout.paymentInstructions')}</p>
-                        <button onClick={handleOrderComplete}
+                        <button onClick={handleUSDTOrderComplete}
                           className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-lg font-semibold text-lg transition-colors flex items-center justify-center gap-3"
                         >
                           <CheckCircle className="w-6 h-6" />
@@ -384,6 +438,71 @@ export default function CheckoutPage() {
                     )}
                   </div>
                 )}
+
+                {/* Card Payment Flow */}
+                {paymentMethod === 'card' && (
+                  <div className="space-y-6">
+                    {!creemProductsConfigured && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                        <div className="flex items-start gap-3">
+                          <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
+                          <div>
+                            <h4 className="font-semibold text-amber-900">Card Payment Setup Required</h4>
+                            <p className="text-sm text-amber-700 mt-1">
+                              This product is not yet configured for card payments. 
+                              Please use USDT payment or contact support.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <CreditCard className="w-6 h-6 text-blue-600" />
+                        <div>
+                          <h4 className="font-semibold text-blue-900">Secure Card Payment</h4>
+                          <p className="text-sm text-blue-700">Powered by CREEM</p>
+                        </div>
+                      </div>
+                      <ul className="text-sm text-blue-800 space-y-2">
+                        <li>• 支持 Visa, Mastercard, Amex</li>
+                        <li>• 自动处理欧洲 VAT 税务</li>
+                        <li>• 安全加密，符合 PCI DSS 标准</li>
+                      </ul>
+                    </div>
+
+                    <div className="bg-stone-900 text-white rounded-xl p-6">
+                      <div className="text-center">
+                        <p className="text-stone-100 text-sm mb-2">{t('checkout.totalAmount')}</p>
+                        <div className="text-4xl font-bold">€{totalEUR.toFixed(2)}</div>
+                        <p className="text-stone-100 text-sm mt-2">{t('checkout.includesVAT')}</p>
+                      </div>
+                    </div>
+
+                    <button 
+                      onClick={handleCreemCheckout}
+                      disabled={isCreemLoading || !formData.email || !formData.firstName || !formData.lastName || !creemProductsConfigured}
+                      className="w-full bg-stone-900 hover:bg-stone-800 disabled:bg-gray-400 text-white py-4 rounded-lg font-semibold text-lg transition-colors flex items-center justify-center gap-3"
+                    >
+                      {isCreemLoading ? (
+                        <><Loader2 className="w-6 h-6 animate-spin" /> Processing...</>
+                      ) : (
+                        <><CreditCard className="w-6 h-6" /> Pay with Card</>
+                      )}
+                    </button>
+                    
+                    {!formData.email || !formData.firstName || !formData.lastName ? (
+                      <p className="text-sm text-amber-600 text-center">
+                        Please fill in contact and shipping information first
+                      </p>
+                    ) : !creemProductsConfigured ? (
+                      <p className="text-sm text-amber-600 text-center">
+                        Card payment not available for this product yet
+                      </p>
+                    ) : null}
+                  </div>
+                )}
               </div>
             </section>
           </div>
@@ -430,10 +549,12 @@ export default function CheckoutPage() {
                     <span>{t('checkout.total')}</span>
                     <span>€{totalEUR.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-sm text-green-600 mt-1">
-                    <span>{t('checkout.payWithUSDT')}</span>
-                    <span>{totalUSDT} USDT</span>
-                  </div>
+                  {paymentMethod === 'usdt' && (
+                    <div className="flex justify-between text-sm text-green-600 mt-1">
+                      <span>{t('checkout.payWithUSDT')}</span>
+                      <span>{totalUSDT} USDT</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

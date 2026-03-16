@@ -45,6 +45,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   }, []);
 
   const handleAddToCart = () => {
+    // 使用原价，不使用折扣
     for (let i = 0; i < quantity; i++) {
       addItem(product);
     }
@@ -169,20 +170,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                 </span>
               </div>
 
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-amber-800">{t('product.limitedOffer')}</p>
-                    <p className="text-lg font-bold text-amber-600">{t('product.extraOff')}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-amber-600">{t('product.finalPrice')}</p>
-                    <p className="text-2xl font-bold text-amber-600">€{Math.round(product.price * 0.8)}</p>
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-gray-800 leading-relaxed">{product.description}</p>
+              <p className="text-gray-800 leading-relaxed mb-4">{product.description}</p>
             </div>
 
             {/* Quantity & Add to Cart */}
@@ -242,7 +230,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                 }`}
               >
                 <ShoppingCart className="w-5 h-5" />
-                {added ? t('product.addedToCart') : `${t('product.addToCart')} - €${(product.price * quantity * 0.8).toFixed(2)}`}
+                {added ? t('product.addedToCart') : `${t('product.addToCart')} - €${(product.price * quantity).toFixed(2)}`}
               </button>
 
               <div className="text-center pt-4 border-t">

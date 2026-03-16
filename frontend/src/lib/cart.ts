@@ -5,11 +5,12 @@ import { Product } from './data';
 export interface CartItem {
   product: Product;
   quantity: number;
+  discountPrice?: number; // 优惠券后的价格
 }
 
 interface CartState {
   items: CartItem[];
-  addItem: (product: Product) => void;
+  addItem: (product: Product, discountPrice?: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -22,7 +23,7 @@ export const useCart = create<CartState>()(
     (set, get) => ({
       items: [],
       
-      addItem: (product) => {
+      addItem: (product, discountPrice) => {
         set((state) => {
           const existingItem = state.items.find(
             (item) => item.product.id === product.id
@@ -39,7 +40,7 @@ export const useCart = create<CartState>()(
           }
           
           return {
-            items: [...state.items, { product, quantity: 1 }],
+            items: [...state.items, { product, quantity: 1, discountPrice }],
           };
         });
       },

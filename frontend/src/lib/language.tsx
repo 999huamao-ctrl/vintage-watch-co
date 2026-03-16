@@ -146,6 +146,7 @@ const translations = {
       city: "City",
       postalCode: "Postal Code",
       payment: "Payment",
+      paymentMethod: "Payment Method",
       completeShipping: "Please complete shipping information",
       notConfigured: "Payment not configured",
       totalAmount: "Total Amount",
@@ -158,6 +159,7 @@ const translations = {
       txidPlaceholder: "Enter transaction hash (TXID)...",
       txidError: "Please enter a valid transaction hash (64 characters)",
       back: "Back",
+      backToShop: "Back to Shop",
       verifyConfirm: "Verify & Confirm",
       verifying: "Verifying...",
       verified: "Verified!",
@@ -167,6 +169,9 @@ const translations = {
       subtotal: "Subtotal",
       total: "Total",
       payWithUSDT: "Pay with USDT",
+      fillRequired: "Please fill in all required fields",
+      creemError: "Failed to create card payment. Please try again.",
+      includesVAT: "Includes VAT",
     },
     // Common
     common: {

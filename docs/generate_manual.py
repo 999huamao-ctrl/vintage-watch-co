@@ -54,7 +54,9 @@ run.font.color.rgb = RGBColor(0, 51, 102)
 doc.add_paragraph()
 subtitle = doc.add_paragraph()
 subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
-run = subtitle.add_run('版本 3.0 | 2026年3月15日')
+now = datetime.now()
+date_time_str = now.strftime('版本 2.2 | %Y年%m月%d日 %H:%M 生成')
+run = subtitle.add_run(date_time_str)
 set_chinese_font(run, 'SimSun', 14)
 
 doc.add_page_break()
@@ -67,7 +69,7 @@ toc_items = [
     '3. 后台管理操作指南',
     '4. 钱包管理与资金流转',
     '5. 订单处理流程',
-    '6. 数据库部署指南',
+    '6. 数据库配置说明',
     '7. 常见问题与故障处理',
     '8. 附录：账号信息'
 ]
@@ -95,9 +97,8 @@ for item in tech_stack:
 
 add_heading_zh(doc, '1.3 核心网址', 2)
 urls = [
-    '主站：https://horizon-watch-store-1773050228.surge.sh',
-    '后台：https://horizon-watch-store-1773050228.surge.sh/admin',
-    'Vercel备用：https://vintage-watch-co-999huamao-ctrls-projects.vercel.app'
+    '主站：https://horizon-watch.vercel.app',
+    '管理后台：https://horizon-watch-admin.vercel.app/admin'
 ]
 for url in urls:
     add_paragraph_zh(doc, '• ' + url)
@@ -336,10 +337,25 @@ for info in logistics_info:
 
 doc.add_page_break()
 
-# ========== 第6章：数据库部署指南 ==========
-add_heading_zh(doc, '6. 数据库部署指南', 1)
+# ========== 第6章：数据库配置说明 ==========
+add_heading_zh(doc, '6. 数据库配置说明', 1)
 
-add_heading_zh(doc, '6.1 推荐服务商', 2)
+add_heading_zh(doc, '6.1 当前状态', 2)
+add_paragraph_zh(doc, '✅ 数据库架构设计：已完成')
+add_paragraph_zh(doc, '⏳ 实际部署：等待 STAR 选择服务商后执行')
+
+add_heading_zh(doc, '6.2 已完成内容', 2)
+completed_items = [
+    '数据库Schema设计（PostgreSQL）',
+    'Prisma ORM配置',
+    '后台API接口（/api/admin/*）',
+    '数据导出功能'
+]
+for item in completed_items:
+    add_paragraph_zh(doc, '• ' + item)
+
+add_heading_zh(doc, '6.3 待决策事项', 2)
+add_paragraph_zh(doc, '需要 STAR 选择数据库服务商：', True)
 
 table = add_table_zh(doc, 4, 4)
 headers = ['服务商', '免费额度', '特点', '推荐度']
@@ -359,39 +375,15 @@ for i, row_data in enumerate(db_providers, 1):
         run = cell.paragraphs[0].add_run(cell_data)
         set_chinese_font(run, 'SimSun', 9)
 
-add_heading_zh(doc, '6.2 Supabase部署步骤（推荐）', 2)
-
-deploy_steps = [
-    '访问 https://supabase.com，注册/登录账号',
-    '点击 "New Project"',
-    '填写项目名称：horizon-watches',
-    '选择地区：Singapore (Southeast Asia)',
-    '设置数据库密码（务必保存！）',
-    '等待数据库创建完成（约1-2分钟）',
-    '进入项目 → Settings → Database',
-    '复制 Connection string（URI格式）',
-    '在Vercel Dashboard添加环境变量 DATABASE_URL',
-    '执行数据库迁移（见6.3）'
+add_heading_zh(doc, '6.4 部署后操作', 2)
+after_deploy = [
+    '创建数据库实例',
+    '执行Prisma迁移（npx prisma migrate deploy）',
+    '初始化商品数据',
+    '配置环境变量到Vercel',
+    '测试API连接'
 ]
-for i, step in enumerate(deploy_steps, 1):
-    add_paragraph_zh(doc, f'{i}. {step}')
-
-add_heading_zh(doc, '6.3 数据库迁移', 2)
-add_paragraph_zh(doc, '方法一：通过Supabase SQL Editor')
-add_paragraph_zh(doc, '1. 进入Supabase Dashboard → SQL Editor')
-add_paragraph_zh(doc, '2. 新建Query，执行prisma/schema.prisma中的SQL')
-
-add_paragraph_zh(doc, '方法二：通过Prisma Migrate（推荐）', True)
-add_paragraph_zh(doc, 'npx prisma migrate deploy')
-
-add_heading_zh(doc, '6.4 初始化数据', 2)
-init_steps = [
-    '创建初始管理员账号（通过SQL Editor）',
-    '导入商品数据（通过API或CSV导入）',
-    '配置钱包地址（登录后台Settings）',
-    '测试API接口是否正常工作'
-]
-for i, step in enumerate(init_steps, 1):
+for i, step in enumerate(after_deploy, 1):
     add_paragraph_zh(doc, f'{i}. {step}')
 
 doc.add_page_break()
@@ -498,7 +490,9 @@ for c in contacts:
 
 add_heading_zh(doc, '8.3 更新日志', 2)
 changelog = [
-    'v3.0 (2026-03-15) - 新增3级钱包架构、用户管理功能、数据库Schema',
+    'v2.2 (2026-03-16) - 统一Vercel域名、更新数据库状态说明',
+    'v2.1 (2026-03-16) - 更新生产环境URL、修正版本号',
+    'v2.0 (2026-03-15) - 新增3级钱包架构、用户管理功能、数据库Schema',
     'v2.1 (2026-03-11) - 新增AI客服、多角色权限、USDT收款流程',
     'v2.0 (2026-03-08) - UI改版、竞品调研、广告方案',
     'v1.0 (2026-03-05) - 网站基础框架、商品展示、支付集成'
@@ -507,6 +501,6 @@ for log in changelog:
     add_paragraph_zh(doc, '• ' + log)
 
 # 保存文档
-output_path = '/root/.openclaw/workspace/projects/watch-store/docs/Horizon_Watches_运营手册_v3.0.docx'
+output_path = '/root/.openclaw/workspace/projects/watch-store/docs/Horizon_Watches_运营手册_v2.2.docx'
 doc.save(output_path)
 print(f'文档已保存至: {output_path}')
