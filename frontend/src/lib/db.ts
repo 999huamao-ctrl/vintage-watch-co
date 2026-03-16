@@ -1,37 +1,29 @@
-// 数据库服务层 - 当前使用内存存储，部署后切换到Prisma
-// import { PrismaClient, UserRole, OrderStatus, PaymentStatus } from "@prisma/client";
+import { PrismaClient, UserRole, OrderStatus, PaymentStatus, POStatus } from "@prisma/client";
 
-// const globalForPrisma = globalThis as unknown as {
-//   prisma: PrismaClient | undefined;
-// };
-
-// export const prisma = globalForPrisma.prisma ?? new PrismaClient();
-
-// if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
-
-// 临时类型定义
-export type UserRole = "SUPERADMIN" | "ADMIN" | "SUPPLY" | "LOGISTICS" | "CUSTOMER";
-export type OrderStatus = "PENDING" | "CONFIRMED" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "REFUNDED";
-export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
-
-// 内存存储（部署数据库后移除）
-const memoryStorage = {
-  users: [] as any[],
-  products: [] as any[],
-  orders: [] as any[],
-  inventoryLogs: [] as any[],
-  suppliers: [] as any[],
-  purchaseOrders: [] as any[],
-  adCampaigns: [] as any[],
-  dailyReports: [] as any[],
-  userActivities: [] as any[],
-  walletConfig: null as any,
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
 };
+
+export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+
+// 重新导出类型
+export type { UserRole, OrderStatus, PaymentStatus };
+export { POStatus };
 
 // ============== 用户管理 ==============
 
 export async function getUsers() {
-  return memoryStorage.users;
+  return prisma.user.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function getUserByUsername(username: string) {
+  return prisma.user.findUnique({
+    where: { username },
+  });
 }
 
 export async function createUser(data: {
@@ -40,61 +32,176 @@ export async function createUser(data: {
   password: string;
   role: UserRole;
 }) {
-  const user = { id: Date.now().toString(), ...data, createdAt: new Date() };
-  memoryStorage.users.push(user);
-  return user;
+  return prisma.user.create({
+    data,
+  });
 }
 
-export async function updateUser(id: string, data: Partial<{
-  email: string;
-  role: UserRole;
-  isActive: boolean;
-}>) {
-  const user = memoryStorage.users.find(u => u.id === id);
-  if (user) Object.assign(user, data);
-  return user;
+export async function updateUser(
+  id: string,
+  data: Partial<{
+    email: string;
+    role: UserRole;
+    isActive: boolean;
+    lastLoginAt: Date;
+  }>
+) {
+  return prisma.user.update({
+    where: { id },
+    data,
+  });
 }
 
 export async function deleteUser(id: string) {
-  memoryStorage.users = memoryStorage.users.filter(u => u.id !== id);
-  return { success: true };
+  return prisma.user.delete({
+    where: { id },
+  });
 }
 
 // ============== 商品管理 ==============
 
 export async function getProducts() {
-  return memoryStorage.products;
+  return prisma.product.findMany({
+    orderBy: { createdAt: "desc" },
+  });
 }
 
 export async function getProductById(id: string) {
-  return memoryStorage.products.find(p => p.id === id);
+  return prisma.product.findUnique({
+    where: { id },
+  });
 }
 
-export async function createProduct(data: any) {
-  const product = { id: Date.now().toString(), ...data, createdAt: new Date() };
-  memoryStorage.products.push(product);
-  return product;
+export async function createProduct(data: {
+  name: string;
+  nameZh?: string;
+  nameDe?: string;
+  nameFr?: string;
+  nameEs?: string;
+  nameIt?: string;
+  nameJa?: string;
+  price: number;
+  originalPrice?: number;
+  category: string;
+  description: string;
+  descriptionZh?: string;
+  image: string;
+  images?: string[];
+  stock?: number;
+  caseSize?: string;
+  movement?: string;
+  strap?: string;
+  waterResistance?: string;
+}) {
+  return prisma.product.create({
+    data,
+  });
 }
 
-export async function updateProduct(id: string, data: any) {
-  const product = memoryStorage.products.find(p => p.id === id);
-  if (product) Object.assign(product, data);
-  return product;
+export async function updateProduct(id: string, data: Partial<{
+  name: string;
+  nameZh?: string;
+  nameDe?: string;
+  nameFr?: string;
+  nameEs?: string;
+  nameIt?: string;
+  nameJa?: string;
+  price: number;
+  originalPrice?: number;
+  category: string;
+  description: string;
+  descriptionZh?: string;
+  image: string;
+  images?: string[];
+  stock?: number;
+  isActive?: boolean;
+  caseSize?: string;
+  movement?: string;
+  strap?: string;
+  waterResistance?: string;
+}>) {
+  return prisma.product.update({
+    where: { id },
+    data,
+  });
 }
 
 export async function deleteProduct(id: string) {
-  memoryStorage.products = memoryStorage.products.filter(p => p.id !== id);
-  return { success: true };
+  return prisma.product.delete({
+    where: { id },
+  });
 }
 
 // ============== 订单管理 ==============
 
-export async function getOrders(filters?: any) {
-  return memoryStorage.orders;
+export async function getOrders(filters?: { status?: OrderStatus; userId?: string }) {
+  return prisma.order.findMany({
+    where: filters,
+    include: {
+      items: {
+        include: {
+          product: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
 }
 
 export async function getOrderById(id: string) {
-  return memoryStorage.orders.find(o => o.id === id);
+  return prisma.order.findUnique({
+    where: { id },
+    include: {
+      items: {
+        include: {
+          product: true,
+        },
+      },
+    },
+  });
+}
+
+export async function createOrder(data: {
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string;
+  shippingAddress: string;
+  shippingCity: string;
+  shippingZip: string;
+  shippingCountry: string;
+  paymentMethod?: string;
+  subtotal: number;
+  shippingCost?: number;
+  discount?: number;
+  total: number;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  userId?: string;
+  items: Array<{
+    productId: string;
+    quantity: number;
+    price: number;
+  }>;
+}) {
+  const { items, ...orderData } = data;
+  
+  return prisma.order.create({
+    data: {
+      ...orderData,
+      items: {
+        create: items,
+      },
+    },
+    include: {
+      items: {
+        include: {
+          product: true,
+        },
+      },
+    },
+  });
 }
 
 export async function updateOrderStatus(
@@ -102,16 +209,36 @@ export async function updateOrderStatus(
   status: OrderStatus,
   trackingInfo?: { trackingNumber: string; carrier: string }
 ) {
-  const order = memoryStorage.orders.find(o => o.id === id);
-  if (order) {
-    order.status = status;
-    if (trackingInfo) {
-      order.trackingNumber = trackingInfo.trackingNumber;
-      order.carrier = trackingInfo.carrier;
-      order.shippedAt = new Date();
-    }
+  const updateData: any = { status };
+  
+  if (trackingInfo) {
+    updateData.trackingNumber = trackingInfo.trackingNumber;
+    updateData.carrier = trackingInfo.carrier;
+    updateData.shippedAt = new Date();
   }
-  return order;
+  
+  if (status === "DELIVERED") {
+    updateData.deliveredAt = new Date();
+  }
+  
+  return prisma.order.update({
+    where: { id },
+    data: updateData,
+  });
+}
+
+export async function updatePaymentStatus(
+  id: string,
+  paymentStatus: PaymentStatus,
+  paymentTxHash?: string
+) {
+  return prisma.order.update({
+    where: { id },
+    data: {
+      paymentStatus,
+      paymentTxHash,
+    },
+  });
 }
 
 // ============== 库存管理 ==============
@@ -122,107 +249,291 @@ export async function adjustStock(
   reason: string,
   referenceId?: string
 ) {
-  const product = memoryStorage.products.find(p => p.id === productId);
-  if (product) {
-    product.stock = (product.stock || 0) + quantity;
-  }
+  // 更新商品库存
+  const product = await prisma.product.update({
+    where: { id: productId },
+    data: {
+      stock: {
+        increment: quantity,
+      },
+    },
+  });
   
-  memoryStorage.inventoryLogs.push({
-    id: Date.now().toString(),
-    productId,
-    type: quantity > 0 ? "IN" : "OUT",
-    quantity: Math.abs(quantity),
-    reason,
-    referenceId,
-    createdAt: new Date(),
+  // 记录库存流水
+  await prisma.inventoryLog.create({
+    data: {
+      productId,
+      type: quantity > 0 ? "IN" : "OUT",
+      quantity: Math.abs(quantity),
+      reason,
+      referenceId,
+    },
   });
 
   return product;
 }
 
 export async function getInventoryLogs(productId?: string) {
-  return memoryStorage.inventoryLogs.filter(l => !productId || l.productId === productId);
+  return prisma.inventoryLog.findMany({
+    where: productId ? { productId } : undefined,
+    include: {
+      product: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
 }
 
 // ============== 供应链 ==============
 
 export async function getSuppliers() {
-  return memoryStorage.suppliers;
+  return prisma.supplier.findMany({
+    orderBy: { createdAt: "desc" },
+  });
 }
 
-export async function createPurchaseOrder(data: any) {
-  const po = { id: Date.now().toString(), ...data, createdAt: new Date() };
-  memoryStorage.purchaseOrders.push(po);
-  return po;
+export async function createSupplier(data: {
+  name: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  notes?: string;
+}) {
+  return prisma.supplier.create({
+    data,
+  });
 }
 
-export async function receivePurchaseOrder(poId: string) {
-  const po = memoryStorage.purchaseOrders.find(p => p.id === poId);
-  if (po) {
-    po.status = "RECEIVED";
-    po.receivedAt = new Date();
+export async function updateSupplier(id: string, data: Partial<{
+  name: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  notes?: string;
+  isActive?: boolean;
+}>) {
+  return prisma.supplier.update({
+    where: { id },
+    data,
+  });
+}
+
+export async function deleteSupplier(id: string) {
+  return prisma.supplier.delete({
+    where: { id },
+  });
+}
+
+export async function getPurchaseOrders() {
+  return prisma.purchaseOrder.findMany({
+    include: {
+      supplier: true,
+      items: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function createPurchaseOrder(data: {
+  poNumber: string;
+  supplierId: string;
+  totalAmount: number;
+  notes?: string;
+  items: Array<{
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+  }>;
+}) {
+  const { items, ...poData } = data;
+  
+  return prisma.purchaseOrder.create({
+    data: {
+      ...poData,
+      items: {
+        create: items,
+      },
+    },
+    include: {
+      supplier: true,
+      items: true,
+    },
+  });
+}
+
+export async function updatePurchaseOrderStatus(id: string, status: POStatus) {
+  const updateData: any = { status };
+  
+  if (status === "RECEIVED") {
+    updateData.receivedAt = new Date();
   }
-  return po;
+  
+  return prisma.purchaseOrder.update({
+    where: { id },
+    data: updateData,
+  });
+}
+
+// ============== 广告活动 ==============
+
+export async function getAdCampaigns() {
+  return prisma.adCampaign.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function createAdCampaign(data: {
+  name: string;
+  platform: string;
+  status: string;
+  budget: number;
+  startDate: Date;
+  endDate?: Date;
+  utmCampaign?: string;
+}) {
+  return prisma.adCampaign.create({
+    data,
+  });
+}
+
+export async function updateAdCampaign(id: string, data: Partial<{
+  name: string;
+  status: string;
+  budget: number;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  conversions: number;
+  endDate?: Date;
+}>) {
+  return prisma.adCampaign.update({
+    where: { id },
+    data,
+  });
+}
+
+export async function deleteAdCampaign(id: string) {
+  return prisma.adCampaign.delete({
+    where: { id },
+  });
 }
 
 // ============== 运营数据 ==============
 
-export async function getDashboardStats() {
-  return {
-    totalOrders: memoryStorage.orders.length,
-    todayOrders: 0,
-    pendingOrders: memoryStorage.orders.filter(o => ["PENDING", "CONFIRMED", "PROCESSING"].includes(o.status)).length,
-    totalRevenue: memoryStorage.orders.reduce((sum, o) => sum + (o.total || 0), 0),
-    todayRevenue: 0,
-    lowStockProducts: memoryStorage.products.filter(p => (p.stock || 0) <= 10),
-  };
+export async function getDailyReports(startDate?: Date, endDate?: Date) {
+  return prisma.dailyReport.findMany({
+    where: {
+      date: {
+        gte: startDate,
+        lte: endDate,
+      },
+    },
+    orderBy: { date: "desc" },
+  });
 }
 
-export async function createDailyReport(data: any) {
-  const report = { id: Date.now().toString(), ...data };
-  memoryStorage.dailyReports.push(report);
-  return report;
-}
-
-export async function getDailyReports(startDate: Date, endDate: Date) {
-  return memoryStorage.dailyReports.filter(r => r.date >= startDate && r.date <= endDate);
-}
-
-// ============== 客户行为追踪 ==============
-
-export async function trackActivity(data: {
-  sessionId: string;
-  action: string;
-  productId?: string;
-  userId?: string;
-  metadata?: any;
-  ip?: string;
-  userAgent?: string;
+export async function createDailyReport(data: {
+  date: Date;
+  revenue: number;
+  orders: number;
+  visitors: number;
+  adSpend: number;
+  newCustomers: number;
+  note?: string;
 }) {
-  const activity = { id: Date.now().toString(), ...data, createdAt: new Date() };
-  memoryStorage.userActivities.push(activity);
-  return activity;
+  return prisma.dailyReport.upsert({
+    where: { date: data.date },
+    update: data,
+    create: data,
+  });
+}
+
+export async function getDashboardData() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const [totalOrders, totalProducts, totalUsers, todayReport] = await Promise.all([
+    prisma.order.count(),
+    prisma.product.count(),
+    prisma.user.count(),
+    prisma.dailyReport.findUnique({
+      where: { date: today },
+    }),
+  ]);
+  
+  const pendingOrders = await prisma.order.count({
+    where: { status: "PENDING" },
+  });
+  
+  const lowStockProducts = await prisma.product.count({
+    where: {
+      stock: { lt: 10 },
+      isActive: true,
+    },
+  });
+  
+  return {
+    totalOrders,
+    totalProducts,
+    totalUsers,
+    pendingOrders,
+    lowStockProducts,
+    todayRevenue: todayReport?.revenue || 0,
+    todayOrders: todayReport?.orders || 0,
+  };
 }
 
 // ============== 钱包配置 ==============
 
 export async function getWalletConfig() {
-  return memoryStorage.walletConfig;
+  return prisma.walletConfig.findFirst();
 }
 
-export async function updateWalletConfig(
-  data: {
-    l1Receiving: string;
-    l2Operating: string;
-    l3Profit: string;
-  },
-  updatedBy: string
-) {
-  memoryStorage.walletConfig = {
-    id: "1",
-    ...data,
-    updatedBy,
-    updatedAt: new Date(),
-  };
-  return memoryStorage.walletConfig;
+export async function updateWalletConfig(data: {
+  l1Receiving: string;
+  l2Operating: string;
+  l3Profit: string;
+  updatedBy: string;
+}) {
+  const existing = await prisma.walletConfig.findFirst();
+  
+  if (existing) {
+    return prisma.walletConfig.update({
+      where: { id: existing.id },
+      data: {
+        ...data,
+        updatedAt: new Date(),
+      },
+    });
+  }
+  
+  return prisma.walletConfig.create({
+    data,
+  });
+}
+
+// ============== 用户行为追踪 ==============
+
+export async function trackUserActivity(data: {
+  userId?: string;
+  sessionId: string;
+  action: string;
+  productId?: string;
+  metadata?: any;
+  ip?: string;
+  userAgent?: string;
+}) {
+  return prisma.userActivity.create({
+    data,
+  });
+}
+
+export async function getUserActivities(filters?: { userId?: string; sessionId?: string }) {
+  return prisma.userActivity.findMany({
+    where: filters,
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
 }
