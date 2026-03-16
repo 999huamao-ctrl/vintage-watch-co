@@ -22,10 +22,12 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { l1Receiving, l2Operating, l3Profit, updatedBy } = body;
     
-    const config = await updateWalletConfig(
-      { l1Receiving, l2Operating, l3Profit },
-      updatedBy
-    );
+    const config = await updateWalletConfig({
+      l1Receiving,
+      l2Operating,
+      l3Profit,
+      updatedBy,
+    });
     
     return NextResponse.json(config);
   } catch (error) {

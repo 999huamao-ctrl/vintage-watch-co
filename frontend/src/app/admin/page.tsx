@@ -277,7 +277,7 @@ export default function AdminPage() {
           <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl mx-auto mb-4 flex items-center justify-center">
             <Lock className="w-8 h-8 text-slate-900" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">{t("adminLogin")}</h1>
+          <h1 className="text-2xl font-bold text-white mb-2">{t("loginTitle")}</h1>
           <p className="text-slate-400">{t("loginSubtitle")}</p>
         </div>
 

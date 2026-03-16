@@ -35,6 +35,7 @@ export const translations = {
     invalidCredentials: "Invalid username or password",
     
     // 导航
+    adminPanel: "Admin Panel",
     products: "Products",
     orders: "Orders",
     users: "Users",
@@ -42,6 +43,15 @@ export const translations = {
     finance: "Finance",
     analytics: "Analytics",
     
+    // Dashboard
+    dashboard: "Dashboard",
+    totalOrders: "Total Orders",
+    totalProducts: "Total Products",
+    pendingOrders: "Pending Orders",
+    todayRevenue: "Today's Revenue",
+    lowStockAlert: "Low Stock Alert",
+    productsLowStock: "products have low stock",
+
     // 产品管理
     productList: "Product List",
     addProduct: "Add Product",
@@ -99,7 +109,16 @@ export const translations = {
     noTransactions: "No transactions recorded yet.",
     transactionsDesc: "Transactions will appear when orders are placed.",
     active: "Active",
+    inactive: "Inactive",
     exportReport: "Export Report",
+    
+    // 钱包设置
+    walletConfiguration: "Wallet Configuration",
+    l1ReceivingWallet: "L1 - Receiving Wallet",
+    l2OperatingWallet: "L2 - Operating Wallet",
+    l3ProfitWallet: "L3 - Profit Wallet",
+    saveChanges: "Save Changes",
+    comingSoon: "Coming Soon",
     
     // 分析
     analyticsDashboard: "Analytics Dashboard",
@@ -171,6 +190,7 @@ export const translations = {
     invalidCredentials: "用户名或密码错误",
     
     // 导航
+    adminPanel: "管理后台",
     products: "商品管理",
     orders: "订单管理",
     users: "用户管理",
@@ -178,6 +198,15 @@ export const translations = {
     finance: "财务概览",
     analytics: "数据分析",
     
+    // Dashboard
+    dashboard: "仪表盘",
+    totalOrders: "总订单数",
+    totalProducts: "商品总数",
+    pendingOrders: "待处理订单",
+    todayRevenue: "今日收入",
+    lowStockAlert: "库存预警",
+    productsLowStock: "个商品库存不足",
+
     // 产品管理
     productList: "商品列表",
     addProduct: "添加商品",
@@ -235,7 +264,16 @@ export const translations = {
     noTransactions: "暂无交易记录。",
     transactionsDesc: "有订单时，交易将显示在这里。",
     active: "正常",
+    inactive: "已停用",
     exportReport: "导出报表",
+    
+    // 钱包设置
+    walletConfiguration: "钱包配置",
+    l1ReceivingWallet: "L1 - 收款钱包",
+    l2OperatingWallet: "L2 - 运营钱包",
+    l3ProfitWallet: "L3 - 利润钱包",
+    saveChanges: "保存更改",
+    comingSoon: "即将上线",
     
     // 分析
     analyticsDashboard: "数据分析面板",
