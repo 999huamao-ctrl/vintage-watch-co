@@ -1,8 +1,7 @@
-// 本地商品数据备份（数据库不可用时使用）
-// import { prisma } from './db'; // 数据库部署后恢复
+import { prisma } from './db';
 
 // 本地商品数据备份（数据库不可用时使用）
-export const localProducts = [
+const localProducts = [
   {
     id: 'prod_001',
     slug: 'rolex-submariner',
@@ -19,6 +18,7 @@ export const localProducts = [
     isActive: true,
     isFeatured: true,
   },
+  // ... 其他14个商品数据作为fallback
   {
     id: 'prod_002',
     slug: 'rolex-datejust',
@@ -229,22 +229,76 @@ export const localProducts = [
   },
 ];
 
-// 获取所有商品（当前使用本地数据，数据库部署后恢复数据库查询）
+// 数据库字段映射：将数据库字段转换为前端需要的格式
+function mapDbProductToFrontend(dbProduct: any) {
+  return {
+    id: dbProduct.id,
+    slug: dbProduct.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+    baseName: dbProduct.name,
+    baseDesc: dbProduct.description,
+    price: dbProduct.price,
+    comparePrice: dbProduct.originalPrice || dbProduct.price * 1.5,
+    sku: `ROL-${dbProduct.category?.substring(0, 3).toUpperCase() || 'GEN'}-${dbProduct.id.slice(-3)}`,
+    stock: dbProduct.stock,
+    images: dbProduct.images || [dbProduct.image],
+    category: { 
+      name: dbProduct.category === 'Lady-Datejust' || dbProduct.category === 'Pearlmaster' ? 'Women' : 'Men', 
+      slug: dbProduct.category === 'Lady-Datejust' || dbProduct.category === 'Pearlmaster' ? 'women' : 'men' 
+    },
+    specifications: {
+      dialSize: dbProduct.caseSize,
+      movement: dbProduct.movement,
+      waterResistance: dbProduct.waterResistance,
+      material: 'Stainless Steel',
+      strap: dbProduct.strap,
+    },
+    translations: [],
+    isActive: dbProduct.isActive,
+    isFeatured: ['Submariner', 'Datejust', 'Daytona', 'Lady-Datejust', 'Pearlmaster'].includes(dbProduct.category),
+  };
+}
+
+// 获取所有商品（优先从数据库获取，失败时使用本地数据）
 export async function getProductsWithFallback(options?: {
   category?: string;
   language?: string;
   isActive?: boolean;
   isFeatured?: boolean;
 }) {
-  // 数据库部署后启用以下代码：
-  // try {
-  //   const dbProducts = await prisma.product.findMany({...});
-  //   if (dbProducts.length > 0) return dbProducts;
-  // } catch (error) {
-  //   console.log('Database fetch failed, using local data:', error);
-  // }
+  try {
+    // 优先从数据库获取
+    const dbProducts = await prisma.product.findMany({
+      where: {
+        ...(options?.isActive !== undefined ? { isActive: options.isActive } : { isActive: true }),
+        ...(options?.category ? { 
+          category: options.category === 'women' 
+            ? { in: ['Lady-Datejust', 'Pearlmaster'] }
+            : { notIn: ['Lady-Datejust', 'Pearlmaster'] }
+        } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (dbProducts.length > 0) {
+      console.log(`[getProducts] Loaded ${dbProducts.length} products from database`);
+      let products = dbProducts.map(mapDbProductToFrontend);
+      
+      if (options?.isFeatured) {
+        products = products.filter(p => p.isFeatured);
+      }
+      
+      return products.map(p => ({
+        ...p,
+        name: p.baseName,
+        description: p.baseDesc,
+      }));
+    }
+  } catch (error) {
+    console.log('[getProducts] Database fetch failed, using local fallback:', error);
+  }
   
-  // 返回本地数据
+  // 数据库失败时使用本地数据
+  console.log('[getProducts] Using local fallback data');
   let products = localProducts;
   
   if (options?.category) {
@@ -261,16 +315,33 @@ export async function getProductsWithFallback(options?: {
   }));
 }
 
-// 获取单个商品
+// 获取单个商品（优先从数据库获取）
 export async function getProductBySlugWithFallback(slug: string, language?: string) {
-  // 数据库部署后启用以下代码：
-  // try {
-  //   const product = await prisma.product.findUnique({...});
-  //   if (product) return product;
-  // } catch (error) {
-  //   console.log('Database fetch failed, using local data:', error);
-  // }
+  try {
+    // 尝试从数据库获取所有商品并匹配slug
+    const dbProducts = await prisma.product.findMany({
+      where: { isActive: true },
+    });
+    
+    const dbProduct = dbProducts.find(p => {
+      const productSlug = p.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      return productSlug === slug;
+    });
+    
+    if (dbProduct) {
+      console.log(`[getProduct] Found "${dbProduct.name}" in database`);
+      const mapped = mapDbProductToFrontend(dbProduct);
+      return {
+        ...mapped,
+        name: mapped.baseName,
+        description: mapped.baseDesc,
+      };
+    }
+  } catch (error) {
+    console.log('[getProduct] Database fetch failed, using local fallback:', error);
+  }
   
+  // 本地fallback
   const localProduct = localProducts.find(p => p.slug === slug);
   if (localProduct) {
     return {
@@ -282,3 +353,6 @@ export async function getProductBySlugWithFallback(slug: string, language?: stri
   
   return null;
 }
+
+// 导出本地数据供紧急fallback使用
+export { localProducts };
