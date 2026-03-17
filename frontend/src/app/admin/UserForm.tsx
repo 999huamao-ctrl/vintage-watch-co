@@ -55,7 +55,9 @@ export default function UserForm({ user, onSave, onCancel, t, currentUserRole }:
 
     setIsSubmitting(true);
     try {
-      await onSave(formData);
+      // 新用户默认密码: username + "123"
+      const userData = user ? formData : { ...formData, password: formData.username + "123" };
+      await onSave(userData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save user");
     } finally {

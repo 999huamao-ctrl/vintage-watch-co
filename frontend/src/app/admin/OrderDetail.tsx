@@ -12,14 +12,14 @@ interface Order {
   total: number;
   status: "PENDING" | "PAID" | "SHIPPED" | "DELIVERED" | "CANCELLED";
   trackingNumber?: string;
-  shippingCarrier?: string;
+  carrier?: string;
   createdAt: string;
 }
 
 interface OrderDetailProps {
   order: Order;
   onClose: () => void;
-  onUpdateStatus: (orderId: string, status: string, trackingInfo?: { trackingNumber: string; shippingCarrier: string }) => void;
+  onUpdateStatus: (orderId: string, status: string, trackingInfo?: { trackingNumber: string; carrier: string }) => void;
   t: (key: TranslationKey) => string;
 }
 
@@ -34,12 +34,12 @@ const statusOptions = [
 export default function OrderDetail({ order, onClose, onUpdateStatus, t }: OrderDetailProps) {
   const [newStatus, setNewStatus] = useState(order.status);
   const [trackingNumber, setTrackingNumber] = useState(order.trackingNumber || "");
-  const [shippingCarrier, setShippingCarrier] = useState(order.shippingCarrier || "");
+  const [shippingCarrier, setShippingCarrier] = useState(order.carrier || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleUpdate = async () => {
     setIsSubmitting(true);
-    const trackingInfo = newStatus === "SHIPPED" ? { trackingNumber, shippingCarrier } : undefined;
+    const trackingInfo = newStatus === "SHIPPED" ? { trackingNumber, carrier: shippingCarrier } : undefined;
     await onUpdateStatus(order.id, newStatus, trackingInfo);
     setIsSubmitting(false);
   };
@@ -71,7 +71,7 @@ export default function OrderDetail({ order, onClose, onUpdateStatus, t }: Order
           {/* 订单金额 */}
           <div className="bg-slate-900/50 rounded-xl p-4">
             <h3 className="text-sm font-medium text-slate-400 mb-3">{t("total")}</h3>
-            <p className="text-2xl font-bold text-amber-400">€{order.total.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-amber-400">€{Number(order.total).toFixed(2)}</p>
           </div>
 
           {/* 当前状态 */}
@@ -90,7 +90,7 @@ export default function OrderDetail({ order, onClose, onUpdateStatus, t }: Order
               {order.trackingNumber ? (
                 <div className="space-y-2">
                   <p className="text-white"><span className="text-slate-400">{t("trackingNumber")}: </span>{order.trackingNumber}</p>
-                  <p className="text-white"><span className="text-slate-400">{t("shippingCarrier")}: </span>{order.shippingCarrier}</p>
+                  <p className="text-white"><span className="text-slate-400">{t("shippingCarrier")}: </span>{order.carrier}</p>
                 </div>
               ) : (
                 <p className="text-slate-400">{t("noTrackingInfo")}</p>

@@ -45,7 +45,7 @@ interface Order {
   createdAt: string;
   paymentStatus: string;
   trackingNumber?: string;
-  shippingCarrier?: string;
+  carrier?: string;
 }
 
 interface DashboardData {
@@ -281,10 +281,10 @@ export default function AdminPage() {
   };
 
   // Order status update
-  const handleUpdateOrderStatus = async (orderId: string, status: string, trackingInfo?: { trackingNumber: string; shippingCarrier: string }) => {
+  const handleUpdateOrderStatus = async (orderId: string, status: string, trackingInfo?: { trackingNumber: string; carrier: string }) => {
     try {
       const res = await fetch("/api/admin/orders", {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: orderId, status, ...trackingInfo }),
       });
@@ -344,6 +344,24 @@ export default function AdminPage() {
       await fetchUsers();
     } catch (err) {
       setDataError("Failed to delete user");
+    }
+  };
+
+  // Wallet config save
+  const handleSaveWalletConfig = async () => {
+    try {
+      const res = await fetch("/api/admin/wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...walletConfig,
+          updatedBy: currentUser?.id,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save wallet config");
+      alert(t("saved"));
+    } catch (err) {
+      setDataError("Failed to save wallet config");
     }
   };
 
@@ -478,7 +496,7 @@ export default function AdminPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-slate-400 text-sm">{t("todayRevenue")}</p>
-              <p className="text-3xl font-bold text-emerald-400">€{dashboardData?.todayRevenue?.toFixed(2) || "0.00"}</p>
+              <p className="text-3xl font-bold text-emerald-400">€{Number(dashboardData?.todayRevenue || 0).toFixed(2)}</p>
             </div>
             <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center">
               <DollarSign className="w-6 h-6 text-emerald-400" />
@@ -539,7 +557,7 @@ export default function AdminPage() {
                       <span className="text-white">{product.name}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-slate-300">€{product.price}</td>
+                  <td className="px-4 py-3 text-slate-300">€{Number(product.price).toFixed(2)}</td>
                   <td className="px-4 py-3">
                     <span className={`${product.stock < 10 ? 'text-red-400' : 'text-slate-300'}`}>
                       {product.stock}
@@ -612,7 +630,7 @@ export default function AdminPage() {
                       <p className="text-slate-400 text-sm">{order.customerEmail}</p>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-slate-300">€{order.total}</td>
+                  <td className="px-4 py-3 text-slate-300">€{Number(order.total).toFixed(2)}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-1 rounded-full text-xs ${
                       order.status === 'PENDING' ? 'bg-amber-500/20 text-amber-400' :
@@ -688,7 +706,10 @@ export default function AdminPage() {
                 className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 font-mono text-sm"
               />
             </div>
-            <button className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 py-2 rounded-lg font-medium transition-colors">
+            <button 
+              onClick={handleSaveWalletConfig}
+              className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 py-2 rounded-lg font-medium transition-colors"
+            >
               <Save className="w-4 h-4" />
               {t("saveChanges")}
             </button>
