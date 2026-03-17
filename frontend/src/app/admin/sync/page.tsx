@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 
-const productsToSync = [
+// 7个缺失的商品数据
+const missingProducts = [
   {
     id: 'prod_009',
     name: 'Rolex Pearlmaster Style',
@@ -140,7 +141,7 @@ export default function SyncPage() {
     const success: string[] = [];
     const failed: string[] = [];
 
-    for (const product of productsToSync) {
+    for (const product of missingProducts) {
       try {
         const res = await fetch('/api/admin/products', {
           method: 'POST',
@@ -166,24 +167,36 @@ export default function SyncPage() {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">商品同步工具</h1>
+        <h1 className="text-3xl font-bold mb-6">🔄 商品同步</h1>
         <p className="text-gray-400 mb-6">
-          将缺失的 7 个商品（prod_009 - prod_015）同步到数据库
+          将缺失的 7 个商品同步到数据库，使前后端商品数量一致（15个）。
         </p>
+
+        <div className="bg-gray-800 rounded-lg p-6 mb-6">
+          <h3 className="text-lg font-medium mb-3">待同步商品：</h3>
+          <ul className="text-sm text-gray-300 space-y-1">
+            {missingProducts.map((p) => (
+              <li key={p.id} className="flex justify-between">
+                <span>{p.name}</span>
+                <span className="text-gray-500">€{p.price}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
 
         {status === 'idle' && (
           <button
             onClick={handleSync}
-            className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-medium"
+            className="w-full bg-blue-600 hover:bg-blue-700 px-6 py-4 rounded-lg font-medium text-lg"
           >
             开始同步
           </button>
         )}
 
         {status === 'syncing' && (
-          <div className="flex items-center gap-3">
-            <div className="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full" />
-            <span>同步中...</span>
+          <div className="flex items-center justify-center gap-3 py-4">
+            <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full" />
+            <span className="text-lg">正在同步...</span>
           </div>
         )}
 
@@ -213,12 +226,20 @@ export default function SyncPage() {
               </div>
             )}
 
-            <button
-              onClick={() => window.location.href = '/admin'}
-              className="bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-medium"
-            >
-              返回后台
-            </button>
+            <div className="flex gap-4">
+              <button
+                onClick={() => window.location.href = '/admin'}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-medium"
+              >
+                返回后台
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-medium"
+              >
+                刷新页面
+              </button>
+            </div>
           </div>
         )}
       </div>
