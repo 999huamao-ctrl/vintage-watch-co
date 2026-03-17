@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
-    const featured = searchParams.get('featured');
 
     const products = await prisma.product.findMany({
       where: {
@@ -19,7 +20,6 @@ export async function GET(request: Request) {
       orderBy: { createdAt: 'desc' },
     });
 
-    // 转换为前端需要的格式
     const formattedProducts = products.map(product => ({
       id: product.id,
       name: product.name,

@@ -1,12 +1,23 @@
 import { PrismaClient, UserRole, OrderStatus, PaymentStatus, POStatus } from "@prisma/client";
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
+// 延迟初始化 PrismaClient，避免构建时出错
+let prisma: PrismaClient;
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+if (typeof window === 'undefined') {
+  // 服务端环境
+  const globalForPrisma = globalThis as unknown as {
+    prisma: PrismaClient | undefined;
+  };
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+  prisma = globalForPrisma.prisma ?? new PrismaClient();
+
+  if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+} else {
+  // 客户端环境 - 创建一个空的 mock（不应该被使用）
+  prisma = new PrismaClient();
+}
+
+export { prisma };
 
 // 重新导出类型
 export type { UserRole, OrderStatus, PaymentStatus };
@@ -249,7 +260,6 @@ export async function adjustStock(
   reason: string,
   referenceId?: string
 ) {
-  // 更新商品库存
   const product = await prisma.product.update({
     where: { id: productId },
     data: {
@@ -259,7 +269,6 @@ export async function adjustStock(
     },
   });
   
-  // 记录库存流水
   await prisma.inventoryLog.create({
     data: {
       productId,
