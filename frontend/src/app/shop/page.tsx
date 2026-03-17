@@ -1,13 +1,75 @@
 "use client";
 
-import { products, categories } from "@/lib/data";
+import { useState, useEffect } from "react";
+import { categories } from "@/lib/data";
 import { useLanguage } from "@/lib/language";
 import Link from "next/link";
 import { SlidersHorizontal } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  originalPrice?: number;
+  image: string;
+  images?: string[];
+  category: string;
+  stock: number;
+  caseSize?: string;
+  movement?: string;
+  strap?: string;
+  waterResistance?: string;
+}
+
 export default function ShopPage() {
   const { t } = useLanguage();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch('/api/products');
+      const data = await res.json();
+      if (data.success) {
+        setProducts(data.data);
+      } else {
+        setError('Failed to load products');
+      }
+    } catch (err) {
+      setError('Network error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="flex items-center justify-center h-96">
+          <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="flex items-center justify-center h-96 text-red-500">
+          {error}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -60,26 +122,26 @@ export default function ShopPage() {
               {products.map(product => (
                 <Link
                   key={product.id}
-                  href={`/product/${product.id}`}
-                  className="group bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-xl transition-all"
+                  href={`/products/${product.id}`}
+                  className="group bg-white rounded-xl border overflow-hidden hover:shadow-lg transition-shadow"
                 >
-                  <div className="aspect-square bg-gradient-to-br from-stone-100 to-stone-200 flex items-center justify-center relative overflow-hidden">
-                    {product.badge && (
-                      <div className="absolute top-3 left-3 bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-full z-10">
-                        {product.badge}
-                      </div>
-                    )}
-                    <img 
-                      src={product.image} 
+                  <div className="aspect-square bg-gray-100 relative overflow-hidden">
+                    <img
+                      src={product.image}
                       alt={product.name}
-                      className="absolute inset-0 w-full h-full object-cover"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                   </div>
-                  
                   <div className="p-4">
-                    <div className="text-xs text-gray-900 mb-1">{product.category.replace(' Collection', '')}</div>
-                    <h3 className="font-medium mb-2 text-gray-900 group-hover:text-stone-700">{product.name}</h3>
-                    <p className="text-lg font-bold text-gray-900">€{product.price}</p>
+                    <p className="text-xs text-gray-500 mb-1">{product.category}</p>
+                    <h3 className="font-medium text-gray-900 mb-2">{product.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-gray-900">€{product.price}</span>
+                      {product.originalPrice && (
+                        <span className="text-sm text-gray-500 line-through">€{product.originalPrice}</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">{product.stock} in stock</p>
                   </div>
                 </Link>
               ))}
