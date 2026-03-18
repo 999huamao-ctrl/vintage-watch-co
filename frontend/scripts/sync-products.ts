@@ -304,7 +304,7 @@ async function syncProducts() {
       });
       console.log(`✅ ${product.name} (${product.id})`);
     } catch (error) {
-      console.error(`❌ ${product.name} (${product.id}):`, error.message);
+      console.error(`❌ ${product.name} (${product.id}):`, (error as Error).message);
     }
   }
   
