@@ -24,16 +24,22 @@ export async function GET(request: Request) {
       id: product.id,
       name: product.name,
       description: product.description,
-      price: product.price,
+      price: Number(product.price),
       originalPrice: Number(product.originalPrice) || Number(product.price) * 1.5,
       category: product.category,
       image: product.image,
       images: product.images || [product.image],
       stock: product.stock,
-      caseSize: product.caseSize,
-      movement: product.movement,
-      strap: product.strap,
-      waterResistance: product.waterResistance,
+      specs: {
+        caseSize: product.caseSize || '40mm',
+        movement: product.movement || 'Automatic',
+        strap: product.strap || 'Steel',
+        waterResistance: product.waterResistance || '100M',
+        crystal: 'Sapphire',
+        caseMaterial: 'Stainless Steel'
+      },
+      inStock: product.stock > 0,
+      badge: product.stock < 10 ? 'Hot' : undefined
     }));
 
     return NextResponse.json({ 

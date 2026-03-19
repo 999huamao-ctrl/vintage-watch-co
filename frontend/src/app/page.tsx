@@ -1,16 +1,52 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/lib/language";
-import { products } from "@/lib/data";
 import ProductCard from "@/components/ProductCard";
 import Navbar from "@/components/Navbar";
 import ChatBot from "@/components/ChatBot";
 import Link from "next/link";
 import { ArrowRight, Star, Truck, Shield, RotateCcw, Clock, Users, Award } from "lucide-react";
 
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  originalPrice?: number;
+  image: string;
+  images: string[];
+  category: string;
+  badge?: string;
+  stock: number;
+}
+
 export default function Home() {
   const { t } = useLanguage();
-  const bestSellers = products.filter(p => p.badge === "Bestseller").slice(0, 4);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch('/api/products');
+      const data = await res.json();
+      if (data.success) {
+        setProducts(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const bestSellers = products.length > 0 
+    ? products.slice(0, 4) 
+    : [];
 
   return (
     <div className="min-h-screen bg-white">
@@ -177,11 +213,17 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {bestSellers.length > 0 ? bestSellers.map(product => (
-            <ProductCard key={product.id} product={product} />
-          )) : products.slice(0, 4).map(product => (
-            <ProductCard key={product.id} product={product} />
-          ))}
+          {loading ? (
+            <div className="col-span-4 text-center py-12">{t('common.loading')}</div>
+          ) : bestSellers.length > 0 ? (
+            bestSellers.map(product => (
+              <ProductCard key={product.id} product={product} />
+            ))
+          ) : (
+            <div className="col-span-4 text-center py-12 text-gray-500">
+              {t('common.noProducts')}
+            </div>
+          )}
         </div>
 
         <div className="text-center mt-12">
