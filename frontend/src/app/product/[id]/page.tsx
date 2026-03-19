@@ -1,4 +1,3 @@
-import { products } from "@/lib/data";
 import { notFound } from "next/navigation";
 import ProductDetails from "./ProductDetails";
 
@@ -6,9 +5,32 @@ interface Props {
   params: Promise<{ id: string }>;
 }
 
+async function getProduct(id: string) {
+  try {
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    
+    const res = await fetch(`${baseUrl}/api/products`, { 
+      cache: 'no-store',
+      next: { revalidate: 0 }
+    });
+    
+    if (!res.ok) return null;
+    
+    const data = await res.json();
+    if (!data.success) return null;
+    
+    return data.data.find((p: any) => p.id === id) || null;
+  } catch (error) {
+    console.error('Failed to fetch product:', error);
+    return null;
+  }
+}
+
 export default async function ProductPage({ params }: Props) {
   const { id } = await params;
-  const product = products.find((p) => p.id === id);
+  const product = await getProduct(id);
 
   if (!product) {
     notFound();
@@ -17,8 +39,24 @@ export default async function ProductPage({ params }: Props) {
   return <ProductDetails product={product} />;
 }
 
-export function generateStaticParams() {
-  return products.map((product) => ({
-    id: product.id,
-  }));
+export async function generateStaticParams() {
+  try {
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    
+    const res = await fetch(`${baseUrl}/api/products`, { cache: 'no-store' });
+    const data = await res.json();
+    
+    if (!data.success) return [];
+    
+    return data.data.map((product: any) => ({
+      id: product.id,
+    }));
+  } catch (error) {
+    return [];
+  }
 }
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
