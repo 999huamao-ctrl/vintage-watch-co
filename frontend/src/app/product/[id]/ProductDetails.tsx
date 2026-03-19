@@ -63,6 +63,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   }, []);
 
   const handleAddToCart = () => {
+    // 使用原价，不使用折扣
     for (let i = 0; i < quantity; i++) {
       addItem(product);
     }
@@ -359,6 +360,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );
