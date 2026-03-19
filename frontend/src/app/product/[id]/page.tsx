@@ -7,8 +7,14 @@ interface Props {
 
 async function getProduct(id: string) {
   try {
-    // SSR 模式下使用相对 URL
-    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ''}/api/products`, { 
+    // 使用 headers() 获取当前请求的 host
+    const { headers } = await import("next/headers");
+    const headersList = await headers();
+    const host = headersList.get("host") || "vintage-watch-co.vercel.app";
+    const protocol = host.includes("localhost") ? "http" : "https";
+    const baseUrl = `${protocol}://${host}`;
+    
+    const res = await fetch(`${baseUrl}/api/products`, { 
       cache: 'no-store'
     });
     
