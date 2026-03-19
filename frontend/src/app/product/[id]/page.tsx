@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
 import ProductDetails from "./ProductDetails";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -7,23 +10,33 @@ interface Props {
 
 async function getProduct(id: string) {
   try {
-    // 使用 headers() 获取当前请求的 host
-    const { headers } = await import("next/headers");
-    const headersList = await headers();
-    const host = headersList.get("host") || "vintage-watch-co.vercel.app";
-    const protocol = host.includes("localhost") ? "http" : "https";
-    const baseUrl = `${protocol}://${host}`;
-    
-    const res = await fetch(`${baseUrl}/api/products`, { 
-      cache: 'no-store'
+    const product = await prisma.product.findUnique({
+      where: { id, isActive: true },
     });
     
-    if (!res.ok) return null;
+    if (!product) return null;
     
-    const data = await res.json();
-    if (!data.success) return null;
-    
-    return data.data.find((p: any) => p.id === id) || null;
+    return {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: Number(product.price),
+      originalPrice: Number(product.originalPrice) || Number(product.price) * 1.5,
+      category: product.category,
+      image: product.image,
+      images: product.images || [product.image],
+      stock: product.stock,
+      specs: {
+        caseSize: product.caseSize || '40mm',
+        movement: product.movement || 'Automatic',
+        strap: product.strap || 'Steel',
+        waterResistance: product.waterResistance || '100M',
+        crystal: 'Sapphire',
+        caseMaterial: 'Stainless Steel'
+      },
+      inStock: product.stock > 0,
+      badge: product.stock < 10 ? 'Hot' : undefined
+    };
   } catch (error) {
     console.error('Failed to fetch product:', error);
     return null;
@@ -41,5 +54,6 @@ export default async function ProductPage({ params }: Props) {
   return <ProductDetails product={product} />;
 }
 
-// 允许动态参数，不预生成
+// 允许动态参数
 export const dynamicParams = true;
+export const revalidate = 0;
