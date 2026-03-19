@@ -1,11 +1,38 @@
 "use client";
 
-import { products, shippingRates } from "@/lib/data";
+import { shippingRates } from "@/lib/data";
 import { useLanguage } from "@/lib/language";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ChevronLeft, Plus, Minus, ShoppingCart, Truck, Shield, RotateCcw, Star, Clock, Check } from "lucide-react";
 import { useCart } from "@/lib/cart";
+import Navbar from "@/components/Navbar";
+
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  originalPrice?: number;
+  image: string;
+  images: string[];
+  category: string;
+  specs: {
+    caseSize: string;
+    movement: string;
+    strap: string;
+    waterResistance: string;
+    crystal: string;
+    caseMaterial: string;
+  };
+  inStock: boolean;
+  stock: number;
+  badge?: string;
+}
+
+interface ProductDetailsProps {
+  product: Product;
+}
 import Navbar from "@/components/Navbar";
 
 interface ProductDetailsProps {
@@ -24,10 +51,6 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   const productImages = product.images || [product.image];
   const addItem = useCart((state) => state.addItem);
   
-  const relatedProducts = products
-    .filter(p => p.category === product.category && p.id !== product.id)
-    .slice(0, 4);
-
   useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft(prev => {
@@ -344,36 +367,3 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
         </div>
 
         {/* Related Products */}
-        {relatedProducts.length > 0 && (
-          <div className="mt-16 pt-8 border-t">
-            <h2 className="text-2xl font-serif mb-6 text-gray-900">{t('bestsellers.youMayLike')}</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {relatedProducts.map(p => (
-                <Link
-                  key={p.id}
-                  href={`/product/${p.id}`}
-                  className="group bg-white rounded-xl border p-4 hover:shadow-xl transition-all hover:-translate-y-1"
-                >
-                  <div className="aspect-square bg-gradient-to-br from-stone-100 to-stone-200 rounded-lg flex items-center justify-center mb-4 overflow-hidden">
-                    <img 
-                      src={p.image} 
-                      alt={p.name}
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <h3 className="font-medium mb-2 text-gray-900 group-hover:text-stone-700">{p.name}</h3>
-                  <div className="flex items-center gap-2">
-                    <p className="text-lg font-bold text-gray-900">€{p.price}</p>
-                    <p className="text-sm text-gray-800 line-through">€{Math.round(p.price * 1.4)}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
