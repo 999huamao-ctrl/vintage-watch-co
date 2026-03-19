@@ -25,7 +25,7 @@ export async function GET(request: Request) {
       name: product.name,
       description: product.description,
       price: product.price,
-      originalPrice: product.originalPrice || product.price * 1.5,
+      originalPrice: Number(product.originalPrice) || Number(product.price) * 1.5,
       category: product.category,
       image: product.image,
       images: product.images || [product.image],
@@ -49,3 +49,4 @@ export async function GET(request: Request) {
     );
   }
 }
+fix: TypeScript type error for Decimal
