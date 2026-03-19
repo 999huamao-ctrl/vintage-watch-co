@@ -39,23 +39,24 @@ export default async function ProductPage({ params }: Props) {
   return <ProductDetails product={product} />;
 }
 
+// 硬编码所有产品ID，确保静态导出时能生成所有页面
 export async function generateStaticParams() {
-  try {
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    
-    const res = await fetch(`${baseUrl}/api/products`, { cache: 'no-store' });
-    const data = await res.json();
-    
-    if (!data.success) return [];
-    
-    return data.data.map((product: any) => ({
-      id: product.id,
-    }));
-  } catch (error) {
-    return [];
-  }
+  return [
+    { id: 'daytona-black' },
+    { id: 'submariner-black' },
+    { id: 'submariner-green' },
+    { id: 'submariner-no-date' },
+    { id: 'gmt-pepsi' },
+    { id: 'gmt-batman' },
+    { id: 'gmt-sprite' },
+    { id: 'datejust-41-blue' },
+    { id: 'datejust-36-blue' },
+    { id: 'explorer-36' },
+    { id: 'explorer-ii-white' },
+    { id: 'sea-dweller-red' },
+    { id: 'sky-dweller-blue' },
+    { id: 'oyster-perpetual-turquoise' },
+  ];
 }
 
 export const dynamic = 'force-dynamic';
