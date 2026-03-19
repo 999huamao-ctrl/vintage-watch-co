@@ -36,20 +36,16 @@ export async function GET(request: Request) {
       waterResistance: product.waterResistance,
     }));
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       data: formattedProducts,
-      count: formattedProducts.length 
+      count: formattedProducts.length
     });
   } catch (error) {
     console.error('Failed to fetch products:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch products' },
       { status: 500 }
-
-fix: TypeScript type error for Decimal
-
     );
   }
 }
-
