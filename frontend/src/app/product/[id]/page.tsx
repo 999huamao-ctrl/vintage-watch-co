@@ -7,13 +7,11 @@ interface Props {
 
 async function getProduct(id: string) {
   try {
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    // SSR 模式下使用绝对 URL 或相对 URL
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}` || '';
     
     const res = await fetch(`${baseUrl}/api/products`, { 
-      cache: 'no-store',
-      next: { revalidate: 0 }
+      cache: 'no-store'
     });
     
     if (!res.ok) return null;
@@ -39,25 +37,5 @@ export default async function ProductPage({ params }: Props) {
   return <ProductDetails product={product} />;
 }
 
-// 硬编码所有产品ID，确保静态导出时能生成所有页面
-export async function generateStaticParams() {
-  return [
-    { id: 'daytona-black' },
-    { id: 'submariner-black' },
-    { id: 'submariner-green' },
-    { id: 'submariner-no-date' },
-    { id: 'gmt-pepsi' },
-    { id: 'gmt-batman' },
-    { id: 'gmt-sprite' },
-    { id: 'datejust-41-blue' },
-    { id: 'datejust-36-blue' },
-    { id: 'explorer-36' },
-    { id: 'explorer-ii-white' },
-    { id: 'sea-dweller-red' },
-    { id: 'sky-dweller-blue' },
-    { id: 'oyster-perpetual-turquoise' },
-  ];
-}
-
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// 动态路由，不需要预生成
+export const dynamicParams = true;
