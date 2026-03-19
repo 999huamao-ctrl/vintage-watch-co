@@ -46,7 +46,10 @@ export async function GET(request: Request) {
     return NextResponse.json(
       { success: false, error: 'Failed to fetch products' },
       { status: 500 }
+
+fix: TypeScript type error for Decimal
+
     );
   }
 }
-fix: TypeScript type error for Decimal
+
