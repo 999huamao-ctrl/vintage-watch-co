@@ -19,6 +19,15 @@ interface Product {
   category: string;
   badge?: string;
   stock: number;
+  specs: {
+    caseSize: string;
+    movement: string;
+    strap: string;
+    waterResistance: string;
+    crystal: string;
+    caseMaterial: string;
+  };
+  inStock: boolean;
 }
 
 export default function Home() {
