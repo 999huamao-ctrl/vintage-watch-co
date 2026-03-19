@@ -33,11 +33,6 @@ interface Product {
 interface ProductDetailsProps {
   product: Product;
 }
-import Navbar from "@/components/Navbar";
-
-interface ProductDetailsProps {
-  product: typeof products[0];
-}
 
 export default function ProductDetails({ product }: ProductDetailsProps) {
   const { t } = useLanguage();
@@ -50,7 +45,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   
   const productImages = product.images || [product.image];
   const addItem = useCart((state) => state.addItem);
-  
+
   useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft(prev => {
@@ -68,7 +63,6 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   }, []);
 
   const handleAddToCart = () => {
-    // 使用原价，不使用折扣
     for (let i = 0; i < quantity; i++) {
       addItem(product);
     }
@@ -365,5 +359,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             </div>
           </div>
         </div>
-
-        {/* Related Products */}
+      </div>
+    </div>
+  );
+}
