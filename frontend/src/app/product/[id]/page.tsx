@@ -7,10 +7,8 @@ interface Props {
 
 async function getProduct(id: string) {
   try {
-    // SSR 模式下使用绝对 URL 或相对 URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}` || '';
-    
-    const res = await fetch(`${baseUrl}/api/products`, { 
+    // SSR 模式下使用相对 URL
+    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ''}/api/products`, { 
       cache: 'no-store'
     });
     
@@ -37,5 +35,5 @@ export default async function ProductPage({ params }: Props) {
   return <ProductDetails product={product} />;
 }
 
-// 动态路由，不需要预生成
+// 允许动态参数，不预生成
 export const dynamicParams = true;
