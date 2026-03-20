@@ -25,17 +25,32 @@ export async function getCurrentUser(request: Request) {
     
     // 检查是否是硬编码 token（开发测试用）
     if (token.startsWith("token-")) {
-      const username = token.replace("token-", "");
+      const userId = token.replace("token-", "");
+      
+      // 尝试从数据库获取用户信息
+      try {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { id: true, username: true, role: true, isActive: true, email: true }
+        });
+        
+        if (dbUser) {
+          return dbUser;
+        }
+      } catch (e) {
+        // 数据库查询失败，使用硬编码规则
+      }
+      
+      // 硬编码规则作为 fallback
       return {
-        id: username,
-        username,
-        role: username === "admin" ? "SUPERADMIN" : "ADMIN",
+        id: userId,
+        username: userId,
+        role: userId === "admin" ? "SUPERADMIN" : "ADMIN",
         isActive: true,
       };
     }
     
     // TODO: 实现 JWT 验证逻辑
-    // 目前简单返回 null，让硬编码账号可以工作
     return null;
   } catch (error) {
     console.error("Auth error:", error);
