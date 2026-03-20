@@ -55,8 +55,17 @@ export default function UserForm({ user, onSave, onCancel, t, currentUserRole }:
 
     setIsSubmitting(true);
     try {
-      // 新用户默认密码: username + "123"
-      const userData = user ? formData : { ...formData, password: formData.username + "123" };
+      // 新用户生成随机安全密码
+      const generateSecurePassword = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
+        let password = '';
+        for (let i = 0; i < 12; i++) {
+          password += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return password;
+      };
+      
+      const userData = user ? formData : { ...formData, password: generateSecurePassword() };
       await onSave(userData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save user");
@@ -122,7 +131,7 @@ export default function UserForm({ user, onSave, onCancel, t, currentUserRole }:
                 placeholder="••••••••"
                 disabled
               />
-              <p className="text-slate-500 text-xs mt-1">Default password: username + "123"</p>
+              <p className="text-amber-400 text-xs mt-1">⚠️ A secure random password will be generated automatically. Please reset it after first login.</p>
             </div>
           )}
 

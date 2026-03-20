@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { getOrders, updateOrderStatus } from "@/lib/db";
+import { checkAdminPermission } from "@/lib/auth";
 
 export async function GET(request: Request) {
   try {
+    // Check permission (orders or shipping can view)
+    const authError = await checkAdminPermission(request, ["orders", "shipping"]);
+    if (authError) return authError;
+    
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const startDate = searchParams.get("startDate");
@@ -26,6 +31,10 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    // Only shipping permission can update order status
+    const authError = await checkAdminPermission(request, ["shipping"]);
+    if (authError) return authError;
+    
     const body = await request.json();
     const { id, status, trackingNumber, carrier } = body;
     

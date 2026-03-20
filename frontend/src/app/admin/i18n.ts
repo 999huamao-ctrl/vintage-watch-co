@@ -80,21 +80,29 @@ export const translations = {
     date: "Date",
     allOrders: "All Orders",
     pending: "Pending",
+    confirmed: "Confirmed",
+    processing: "Processing",
     paid: "Paid",
     shipped: "Shipped",
     delivered: "Delivered",
+    cancelled: "Cancelled",
+    refunded: "Refunded",
     noOrders: "No orders yet",
     ordersDesc: "Orders will appear here when customers make purchases.",
     loadingOrders: "Loading orders...",
     retry: "Retry",
     trackingInfo: "Tracking Info",
-    trackingNumber: "Tracking Number", 
+    trackingNumber: "Tracking Number",
     shippingCarrier: "Carrier",
     noTrackingInfo: "No tracking info",
     updateStatus: "Update Status",
     selectCarrier: "Select Carrier",
     updating: "Updating...",
-    cancelled: "Cancelled",
+    failed: "Failed",
+
+    // 权限提示
+    accessDenied: "Access Denied",
+    noPermission: "You don't have permission to access this feature.",
     
     // 用户管理
     userManagement: "User Management",
@@ -250,9 +258,13 @@ export const translations = {
     date: "日期",
     allOrders: "全部订单",
     pending: "待付款",
+    confirmed: "已确认",
+    processing: "处理中",
     paid: "已付款",
     shipped: "已发货",
     delivered: "已完成",
+    cancelled: "已取消",
+    refunded: "已退款",
     noOrders: "暂无订单",
     ordersDesc: "客户下单后，订单将显示在这里。",
     loadingOrders: "加载订单中...",
@@ -264,7 +276,11 @@ export const translations = {
     updateStatus: "更新状态",
     selectCarrier: "选择承运商",
     updating: "更新中...",
-    cancelled: "已取消",
+    failed: "支付失败",
+
+    // 权限提示
+    accessDenied: "访问被拒绝",
+    noPermission: "您没有权限访问此功能。",
     
     // 用户管理
     userManagement: "用户管理",
@@ -345,3 +361,9 @@ export const translations = {
 };
 
 export type TranslationKey = keyof typeof translations.en;
+
+// 辅助函数：检查翻译键是否存在
+type DotPrefix<T extends string> = T extends '' ? '' : `.${T}`;
+type DotPath<T> = (T extends object ? {
+  [K in Exclude<keyof T, symbol>]: `${K}${DotPrefix<DotPath<T[K]>>}`
+}[Exclude<keyof T, symbol>] : '') extends infer D ? Extract<D, string> : never;

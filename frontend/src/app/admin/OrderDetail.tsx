@@ -10,7 +10,7 @@ interface Order {
   customerName: string;
   customerEmail: string;
   total: number;
-  status: "PENDING" | "PAID" | "SHIPPED" | "DELIVERED" | "CANCELLED";
+  status: "PENDING" | "CONFIRMED" | "PROCESSING" | "PAID" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "REFUNDED";
   trackingNumber?: string;
   carrier?: string;
   createdAt: string;
@@ -21,17 +21,21 @@ interface OrderDetailProps {
   onClose: () => void;
   onUpdateStatus: (orderId: string, status: string, trackingInfo?: { trackingNumber: string; carrier: string }) => void;
   t: (key: TranslationKey) => string;
+  canManageShipping?: boolean;
 }
 
 const statusOptions = [
   { value: "PENDING", label: "pending", icon: Clock, color: "amber" },
+  { value: "CONFIRMED", label: "confirmed", icon: CheckCircle, color: "indigo" },
+  { value: "PROCESSING", label: "processing", icon: Clock, color: "purple" },
   { value: "PAID", label: "paid", icon: CheckCircle, color: "emerald" },
   { value: "SHIPPED", label: "shipped", icon: Truck, color: "blue" },
   { value: "DELIVERED", label: "delivered", icon: Package, color: "green" },
   { value: "CANCELLED", label: "cancelled", icon: XCircle, color: "red" },
+  { value: "REFUNDED", label: "refunded", icon: XCircle, color: "orange" },
 ];
 
-export default function OrderDetail({ order, onClose, onUpdateStatus, t }: OrderDetailProps) {
+export default function OrderDetail({ order, onClose, onUpdateStatus, t, canManageShipping = true }: OrderDetailProps) {
   const [newStatus, setNewStatus] = useState(order.status);
   const [trackingNumber, setTrackingNumber] = useState(order.trackingNumber || "");
   const [shippingCarrier, setShippingCarrier] = useState(order.carrier || "");
@@ -98,72 +102,80 @@ export default function OrderDetail({ order, onClose, onUpdateStatus, t }: Order
             </div>
           ) : null}
 
-          {/* 更新状态 */}
-          <div className="border-t border-slate-700 pt-6">
-            <h3 className="text-sm font-medium text-white mb-4">{t("updateStatus")}</h3>
-            
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              {statusOptions.map((option) => {
-                const Icon = option.icon;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setNewStatus(option.value as Order["status"])}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors text-left ${
-                      newStatus === option.value
-                        ? `bg-${option.color}-500/20 border-${option.color}-500 text-${option.color}-400`
-                        : "bg-slate-900/50 border-slate-700 text-slate-400 hover:border-slate-600"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span className="text-sm">{t(option.label as TranslationKey)}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* 物流信息输入（仅在发货状态） */}
-            {newStatus === "SHIPPED" && (
-              <div className="space-y-3 mb-4">
-                <div>
-                  <label className="block text-sm text-slate-400 mb-1">{t("trackingNumber")}</label>
-                  <input
-                    type="text"
-                    value={trackingNumber}
-                    onChange={(e) => setTrackingNumber(e.target.value)}
-                    className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-amber-500"
-                    placeholder="1Z999AA10123456784"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-slate-400 mb-1">{t("shippingCarrier")}</label>
-                  <select
-                    value={shippingCarrier}
-                    onChange={(e) => setShippingCarrier(e.target.value)}
-                    className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="">{t("selectCarrier")}</option>
-                    <option value="DHL">DHL</option>
-                    <option value="UPS">UPS</option>
-                    <option value="FedEx">FedEx</option>
-                    <option value="TNT">TNT</option>
-                    <option value="GLS">GLS</option>
-                    <option value="DPD">DPD</option>
-                    <option value="Local Post">Local Post</option>
-                  </select>
-                </div>
+          {/* 更新状态 - 仅物流角色可以操作 */}
+          {canManageShipping && (
+            <div className="border-t border-slate-700 pt-6">
+              <h3 className="text-sm font-medium text-white mb-4">{t("updateStatus")}</h3>
+              
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {statusOptions.map((option) => {
+                  const Icon = option.icon;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setNewStatus(option.value as Order["status"])}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors text-left ${
+                        newStatus === option.value
+                          ? `bg-${option.color}-500/20 border-${option.color}-500 text-${option.color}-400`
+                          : "bg-slate-900/50 border-slate-700 text-slate-400 hover:border-slate-600"
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span className="text-sm">{t(option.label as TranslationKey)}</span>
+                    </button>
+                  );
+                })}
               </div>
-            )}
 
-            <button
-              onClick={handleUpdate}
-              disabled={isSubmitting || newStatus === order.status}
-              className="w-full py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 rounded-lg font-medium transition-colors"
-            >
-              {isSubmitting ? t("updating") : t("updateStatus")}
-            </button>
-          </div>
+              {/* 物流信息输入（仅在发货状态） */}
+              {newStatus === "SHIPPED" && (
+                <div className="space-y-3 mb-4">
+                  <div>
+                    <label className="block text-sm text-slate-400 mb-1">{t("trackingNumber")}</label>
+                    <input
+                      type="text"
+                      value={trackingNumber}
+                      onChange={(e) => setTrackingNumber(e.target.value)}
+                      className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-amber-500"
+                      placeholder="1Z999AA10123456784"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-slate-400 mb-1">{t("shippingCarrier")}</label>
+                    <select
+                      value={shippingCarrier}
+                      onChange={(e) => setShippingCarrier(e.target.value)}
+                      className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="">{t("selectCarrier")}</option>
+                      <option value="DHL">DHL</option>
+                      <option value="UPS">UPS</option>
+                      <option value="FedEx">FedEx</option>
+                      <option value="TNT">TNT</option>
+                      <option value="GLS">GLS</option>
+                      <option value="DPD">DPD</option>
+                      <option value="Local Post">Local Post</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={handleUpdate}
+                disabled={isSubmitting || newStatus === order.status}
+                className="w-full py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 rounded-lg font-medium transition-colors"
+              >
+                {isSubmitting ? t("updating") : t("updateStatus")}
+              </button>
+            </div>
+          )}
+          
+          {!canManageShipping && (
+            <div className="border-t border-slate-700 pt-6 text-center">
+              <p className="text-slate-400 text-sm">{t("noPermission")}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

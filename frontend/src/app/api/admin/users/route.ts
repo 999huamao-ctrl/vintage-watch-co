@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { getUsers, createUser, updateUser, deleteUser } from "@/lib/db";
+import { checkAdminPermission, requireSuperAdmin } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    // Only users permission (SUPERADMIN) can access
+    const authError = await checkAdminPermission(request, ["users"]);
+    if (authError) return authError;
+    
     const users = await getUsers();
     return NextResponse.json(users);
   } catch (error) {
@@ -16,6 +21,10 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    // Only SUPERADMIN can create users
+    const authError = await requireSuperAdmin(request);
+    if (authError) return authError;
+    
     const body = await request.json();
     const { username, email, password, role } = body;
     
@@ -40,6 +49,10 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
+    // Only SUPERADMIN can update users
+    const authError = await requireSuperAdmin(request);
+    if (authError) return authError;
+    
     const body = await request.json();
     const { id, ...data } = body;
     
@@ -55,6 +68,10 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    // Only SUPERADMIN can delete users
+    const authError = await requireSuperAdmin(request);
+    if (authError) return authError;
+    
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     

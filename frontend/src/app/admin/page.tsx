@@ -38,7 +38,7 @@ interface Product {
 interface Order {
   id: string;
   orderNumber: string;
-  status: "PENDING" | "PAID" | "SHIPPED" | "DELIVERED" | "CANCELLED";
+  status: "PENDING" | "CONFIRMED" | "PROCESSING" | "PAID" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "REFUNDED";
   customerName: string;
   customerEmail: string;
   total: number;
@@ -58,26 +58,36 @@ interface DashboardData {
   todayOrders: number;
 }
 
-const getRolePermissions = (t: (key: TranslationKey) => string): Record<UserRole, { label: string; icon: any; permissions: string[] }> => ({
+const getRolePermissions = (t: (key: TranslationKey) => string): Record<UserRole | "CUSTOMER", { label: string; icon: any; permissions: string[]; description: string }> => ({
   SUPERADMIN: {
     label: t("superadmin"),
     icon: Shield,
-    permissions: ["dashboard", "products", "orders", "users", "settings", "finance", "analytics"],
+    permissions: ["dashboard", "products", "orders", "users", "settings", "finance", "analytics", "inventory", "shipping"],
+    description: "Full system access",
   },
   ADMIN: {
     label: t("admin"),
     icon: UserCircle,
-    permissions: ["dashboard", "products", "orders"],
+    permissions: ["dashboard", "products", "orders", "inventory"],
+    description: "Manage products and orders",
   },
   SUPPLY: {
     label: t("supply"),
     icon: Package,
     permissions: ["dashboard", "products", "inventory"],
+    description: "Manage inventory and products",
   },
   LOGISTICS: {
     label: t("logistics"),
     icon: Truck,
     permissions: ["dashboard", "orders", "shipping"],
+    description: "Manage orders and shipping",
+  },
+  CUSTOMER: {
+    label: "Customer",
+    icon: UserCircle,
+    permissions: [],
+    description: "No admin access",
   },
 });
 
@@ -406,6 +416,17 @@ export default function AdminPage() {
     return ROLE_PERMISSIONS[currentUser.role]?.permissions.includes(permission) || false;
   };
 
+  // Access denied component
+  const renderAccessDenied = () => (
+    <div className="flex flex-col items-center justify-center h-96">
+      <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mb-4">
+        <Lock className="w-10 h-10 text-red-400" />
+      </div>
+      <h2 className="text-xl font-semibold text-white mb-2">{t("accessDenied")}</h2>
+      <p className="text-slate-400">{t("noPermission")}</p>
+    </div>
+  );
+
   // Render functions
   const renderLogin = () => (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
@@ -519,160 +540,195 @@ export default function AdminPage() {
     </div>
   );
 
-  const renderProducts = () => (
-    <>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-white">{t("products")}</h2>
-          {hasPermission("products") && (
-            <button 
-              onClick={() => { setEditingProduct(null); setShowProductForm(true); }}
-              className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 py-2 rounded-lg font-medium transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              {t("addProduct")}
-            </button>
-          )}
-        </div>
-        
-        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-slate-900/50">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("product")}</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("price")}</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("stock")}</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("status")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-slate-400">{t("actions")}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700/50">
-              {products.map((product) => (
-                <tr key={product.id} className="hover:bg-slate-700/30">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center">
-                        <Package className="w-5 h-5 text-slate-400" />
+  const renderProducts = () => {
+    // Check if user has any product-related permission
+    if (!hasPermission("products") && !hasPermission("inventory")) {
+      return renderAccessDenied();
+    }
+
+    const canEditProducts = hasPermission("products");
+    const canManageInventory = hasPermission("inventory");
+
+    return (
+      <>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-white">{t("products")}</h2>
+            {canEditProducts && (
+              <button 
+                onClick={() => { setEditingProduct(null); setShowProductForm(true); }}
+                className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 py-2 rounded-lg font-medium transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                {t("addProduct")}
+              </button>
+            )}
+          </div>
+          
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-slate-900/50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("product")}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("price")}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("stock")}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("status")}</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-slate-400">{t("actions")}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-700/50">
+                {products.map((product) => (
+                  <tr key={product.id} className="hover:bg-slate-700/30">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center">
+                          <Package className="w-5 h-5 text-slate-400" />
+                        </div>
+                        <span className="text-white">{product.name}</span>
                       </div>
-                      <span className="text-white">{product.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-slate-300">€{Number(product.price).toFixed(2)}</td>
-                  <td className="px-4 py-3">
-                    <span className={`${product.stock < 10 ? 'text-red-400' : 'text-slate-300'}`}>
-                      {product.stock}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded-full text-xs ${product.isActive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-500/20 text-slate-400'}`}>
-                      {product.isActive ? t("active") : t("inactive")}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button 
-                      onClick={() => { setEditingProduct(product); setShowProductForm(true); }}
-                      className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors mr-1"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteProduct(product.id)}
-                      className="p-2 hover:bg-red-500/20 rounded-lg text-slate-400 hover:text-red-400 transition-colors"
-                    >
-                      <Trash className="w-4 h-4" />
-                    </button>
-                  </td>
+                    </td>
+                    <td className="px-4 py-3 text-slate-300">€{Number(product.price).toFixed(2)}</td>
+                    <td className="px-4 py-3">
+                      <span className={`${product.stock < 10 ? 'text-red-400' : 'text-slate-300'}`}>
+                        {product.stock}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 rounded-full text-xs ${product.isActive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-500/20 text-slate-400'}`}>
+                        {product.isActive ? t("active") : t("inactive")}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {(canEditProducts || canManageInventory) && (
+                        <button 
+                          onClick={() => { setEditingProduct(product); setShowProductForm(true); }}
+                          className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors mr-1"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      {canEditProducts && (
+                        <button 
+                          onClick={() => handleDeleteProduct(product.id)}
+                          className="p-2 hover:bg-red-500/20 rounded-lg text-slate-400 hover:text-red-400 transition-colors"
+                        >
+                          <Trash className="w-4 h-4" />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {showProductForm && (
+          <ProductForm
+            product={editingProduct}
+            onSave={editingProduct ? handleUpdateProduct : handleCreateProduct}
+            onCancel={() => { setShowProductForm(false); setEditingProduct(null); }}
+            t={t}
+            canEditAll={canEditProducts}
+          />
+        )}
+      </>
+    );
+  };
+
+  const renderOrders = () => {
+    // Check if user has any order-related permission
+    if (!hasPermission("orders") && !hasPermission("shipping")) {
+      return renderAccessDenied();
+    }
+
+    const canManageShipping = hasPermission("shipping");
+
+    return (
+      <>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-white">{t("orders")}</h2>
+          </div>
+          
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-slate-900/50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("orderNumber")}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("customer")}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("total")}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("status")}</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-slate-400">{t("actions")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-700/50">
+                {orders.map((order) => (
+                  <tr key={order.id} className="hover:bg-slate-700/30 cursor-pointer"
+                    onClick={() => { setSelectedOrder(order); setShowOrderDetail(true); }}
+                  >
+                    <td className="px-4 py-3 text-white font-medium">{order.orderNumber}</td>
+                    <td className="px-4 py-3">
+                      <div>
+                        <p className="text-white">{order.customerName}</p>
+                        <p className="text-slate-400 text-sm">{order.customerEmail}</p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-300">€{Number(order.total).toFixed(2)}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        order.status === 'PENDING' ? 'bg-amber-500/20 text-amber-400' :
+                        order.status === 'CONFIRMED' ? 'bg-indigo-500/20 text-indigo-400' :
+                        order.status === 'PROCESSING' ? 'bg-purple-500/20 text-purple-400' :
+                        order.status === 'PAID' ? 'bg-emerald-500/20 text-emerald-400' :
+                        order.status === 'SHIPPED' ? 'bg-blue-500/20 text-blue-400' :
+                        order.status === 'DELIVERED' ? 'bg-green-500/20 text-green-400' :
+                        order.status === 'REFUNDED' ? 'bg-orange-500/20 text-orange-400' :
+                        'bg-red-500/20 text-red-400'
+                      }`}>
+                        {t(order.status.toLowerCase() as TranslationKey)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {canManageShipping && (
+                        <button 
+                          className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors"
+                          onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); setShowOrderDetail(true); }}
+                        >
+                          <Truck className="w-4 h-4" />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      {showProductForm && (
-        <ProductForm
-          product={editingProduct}
-          onSave={editingProduct ? handleUpdateProduct : handleCreateProduct}
-          onCancel={() => { setShowProductForm(false); setEditingProduct(null); }}
-          t={t}
-        />
-      )}
-    </>
-  );
+        {showOrderDetail && selectedOrder && (
+          <OrderDetail
+            order={selectedOrder}
+            onClose={() => { setShowOrderDetail(false); setSelectedOrder(null); }}
+            onUpdateStatus={handleUpdateOrderStatus}
+            t={t}
+            canManageShipping={canManageShipping}
+          />
+        )}
+      </>
+    );
+  };
 
-  const renderOrders = () => (
-    <>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-white">{t("orders")}</h2>
-        </div>
+  const renderSettings = () => {
+    // Only SUPERADMIN can access settings
+    if (!hasPermission("settings")) {
+      return renderAccessDenied();
+    }
+
+    return (
+      <div className="space-y-6">
+        <h2 className="text-xl font-semibold text-white">{t("settings")}</h2>
         
-        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-slate-900/50">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("orderNumber")}</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("customer")}</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("total")}</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("status")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-slate-400">{t("actions")}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700/50">
-              {orders.map((order) => (
-                <tr key={order.id} className="hover:bg-slate-700/30 cursor-pointer"
-                  onClick={() => { setSelectedOrder(order); setShowOrderDetail(true); }}
-                >
-                  <td className="px-4 py-3 text-white font-medium">{order.orderNumber}</td>
-                  <td className="px-4 py-3">
-                    <div>
-                      <p className="text-white">{order.customerName}</p>
-                      <p className="text-slate-400 text-sm">{order.customerEmail}</p>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-slate-300">€{Number(order.total).toFixed(2)}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      order.status === 'PENDING' ? 'bg-amber-500/20 text-amber-400' :
-                      order.status === 'PAID' ? 'bg-emerald-500/20 text-emerald-400' :
-                      order.status === 'SHIPPED' ? 'bg-blue-500/20 text-blue-400' :
-                      order.status === 'DELIVERED' ? 'bg-green-500/20 text-green-400' :
-                      'bg-red-500/20 text-red-400'
-                    }`}>
-                      {t(order.status.toLowerCase() as TranslationKey)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button 
-                      className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors"
-                      onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); setShowOrderDetail(true); }}
-                    >
-                      <Truck className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {showOrderDetail && selectedOrder && (
-        <OrderDetail
-          order={selectedOrder}
-          onClose={() => { setShowOrderDetail(false); setSelectedOrder(null); }}
-          onUpdateStatus={handleUpdateOrderStatus}
-          t={t}
-        />
-      )}
-    </>
-  );
-
-  const renderSettings = () => (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-white">{t("settings")}</h2>
-      
-      {currentUser?.role === "SUPERADMIN" && (
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
           <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
             <Wallet className="w-5 h-5 text-amber-400" />
@@ -715,91 +771,102 @@ export default function AdminPage() {
             </button>
           </div>
         </div>
-      )}
-    </div>
-  );
-
-  const renderUsers = () => (
-    <>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-white">{t("userManagement")}</h2>
-          {currentUser?.role === "SUPERADMIN" && (
-            <button
-              onClick={() => { setEditingUser(null); setShowUserForm(true); }}
-              className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 py-2 rounded-lg font-medium transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              {t("addUser")}
-            </button>
-          )}
-        </div>
-
-        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-slate-900/50">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("username")}</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("email")}</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("role")}</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("status")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-slate-400">{t("actions")}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700/50">
-              {users.map((user) => (
-                <tr key={user.id} className="hover:bg-slate-700/30">
-                  <td className="px-4 py-3 text-white font-medium">{user.username}</td>
-                  <td className="px-4 py-3 text-slate-300">{user.email}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      user.role === 'SUPERADMIN' ? 'bg-purple-500/20 text-purple-400' :
-                      user.role === 'ADMIN' ? 'bg-blue-500/20 text-blue-400' :
-                      user.role === 'SUPPLY' ? 'bg-emerald-500/20 text-emerald-400' :
-                      'bg-amber-500/20 text-amber-400'
-                    }`}>
-                      {t(user.role.toLowerCase() as TranslationKey)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded-full text-xs ${user.isActive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-500/20 text-slate-400'}`}>
-                      {user.isActive ? t("active") : t("inactive")}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => { setEditingUser(user); setShowUserForm(true); }}
-                      className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors mr-1"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    {currentUser?.role === "SUPERADMIN" && user.id !== currentUser.id && (
-                      <button
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="p-2 hover:bg-red-500/20 rounded-lg text-slate-400 hover:text-red-400 transition-colors"
-                      >
-                        <Trash className="w-4 h-4" />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </div>
+    );
+  };
 
-      {showUserForm && (
-        <UserForm
-          user={editingUser}
-          onSave={editingUser ? handleUpdateUser : handleCreateUser}
-          onCancel={() => { setShowUserForm(false); setEditingUser(null); }}
-          t={t}
-          currentUserRole={currentUser?.role}
-        />
-      )}
-    </>
-  );
+  const renderUsers = () => {
+    // Only SUPERADMIN can access user management
+    if (!hasPermission("users")) {
+      return renderAccessDenied();
+    }
+
+    const canManageUsers = hasPermission("users");
+
+    return (
+      <>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-white">{t("userManagement")}</h2>
+            {canManageUsers && (
+              <button
+                onClick={() => { setEditingUser(null); setShowUserForm(true); }}
+                className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 py-2 rounded-lg font-medium transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                {t("addUser")}
+              </button>
+            )}
+          </div>
+
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-slate-900/50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("username")}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("email")}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("role")}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("status")}</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-slate-400">{t("actions")}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-700/50">
+                {users.map((user) => (
+                  <tr key={user.id} className="hover:bg-slate-700/30">
+                    <td className="px-4 py-3 text-white font-medium">{user.username}</td>
+                    <td className="px-4 py-3 text-slate-300">{user.email}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        user.role === 'SUPERADMIN' ? 'bg-purple-500/20 text-purple-400' :
+                        user.role === 'ADMIN' ? 'bg-blue-500/20 text-blue-400' :
+                        user.role === 'SUPPLY' ? 'bg-emerald-500/20 text-emerald-400' :
+                        'bg-amber-500/20 text-amber-400'
+                      }`}>
+                        {t(user.role.toLowerCase() as TranslationKey)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 rounded-full text-xs ${user.isActive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-500/20 text-slate-400'}`}>
+                        {user.isActive ? t("active") : t("inactive")}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {canManageUsers && (
+                        <button
+                          onClick={() => { setEditingUser(user); setShowUserForm(true); }}
+                          className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors mr-1"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      {canManageUsers && user.id !== currentUser?.id && (
+                        <button
+                          onClick={() => handleDeleteUser(user.id)}
+                          className="p-2 hover:bg-red-500/20 rounded-lg text-slate-400 hover:text-red-400 transition-colors"
+                        >
+                          <Trash className="w-4 h-4" />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {showUserForm && (
+          <UserForm
+            user={editingUser}
+            onSave={editingUser ? handleUpdateUser : handleCreateUser}
+            onCancel={() => { setShowUserForm(false); setEditingUser(null); }}
+            t={t}
+            currentUserRole={currentUser?.role}
+          />
+        )}
+      </>
+    );
+  };
 
   if (!isLoggedIn) return renderLogin();
 

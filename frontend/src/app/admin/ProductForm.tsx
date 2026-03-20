@@ -26,6 +26,7 @@ interface ProductFormProps {
   onSave: (product: Product) => void;
   onCancel: () => void;
   t: (key: TranslationKey) => string;
+  canEditAll?: boolean;
 }
 
 const categories = [
@@ -38,7 +39,7 @@ const categories = [
   "Yacht-Master"
 ];
 
-export default function ProductForm({ product, onSave, onCancel, t }: ProductFormProps) {
+export default function ProductForm({ product, onSave, onCancel, t, canEditAll = true }: ProductFormProps) {
   const [formData, setFormData] = useState<Product>({
     name: product?.name || "",
     nameZh: product?.nameZh || "",
@@ -85,8 +86,9 @@ export default function ProductForm({ product, onSave, onCancel, t }: ProductFor
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500"
+                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 required
+                disabled={!canEditAll}
               />
             </div>
             <div>
@@ -95,12 +97,13 @@ export default function ProductForm({ product, onSave, onCancel, t }: ProductFor
                 type="text"
                 value={formData.nameZh}
                 onChange={(e) => setFormData({ ...formData, nameZh: e.target.value })}
-                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500"
+                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!canEditAll}
               />
             </div>
           </div>
 
-          {/* 价格 */}
+          {/* 价格 - 只有完整权限可以编辑 */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-400 mb-2">{t("price")} (€)</label>
@@ -108,10 +111,11 @@ export default function ProductForm({ product, onSave, onCancel, t }: ProductFor
                 type="number"
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500"
+                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 required
                 min="0"
                 step="0.01"
+                disabled={!canEditAll}
               />
             </div>
             <div>
@@ -120,9 +124,10 @@ export default function ProductForm({ product, onSave, onCancel, t }: ProductFor
                 type="number"
                 value={formData.originalPrice || ""}
                 onChange={(e) => setFormData({ ...formData, originalPrice: e.target.value ? Number(e.target.value) : undefined })}
-                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500"
+                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 min="0"
                 step="0.01"
+                disabled={!canEditAll}
               />
             </div>
           </div>
@@ -134,7 +139,8 @@ export default function ProductForm({ product, onSave, onCancel, t }: ProductFor
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500"
+                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!canEditAll}
               >
                 {categories.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
@@ -154,7 +160,7 @@ export default function ProductForm({ product, onSave, onCancel, t }: ProductFor
             </div>
           </div>
 
-          {/* 规格 */}
+          {/* 规格 - 只有完整权限可以编辑 */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-400 mb-2">{t("caseSize")}</label>
@@ -162,8 +168,9 @@ export default function ProductForm({ product, onSave, onCancel, t }: ProductFor
                 type="text"
                 value={formData.caseSize}
                 onChange={(e) => setFormData({ ...formData, caseSize: e.target.value })}
-                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500"
+                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 placeholder="40mm"
+                disabled={!canEditAll}
               />
             </div>
             <div>
@@ -172,8 +179,9 @@ export default function ProductForm({ product, onSave, onCancel, t }: ProductFor
                 type="text"
                 value={formData.movement}
                 onChange={(e) => setFormData({ ...formData, movement: e.target.value })}
-                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500"
+                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 placeholder="Automatic"
+                disabled={!canEditAll}
               />
             </div>
           </div>
@@ -185,8 +193,9 @@ export default function ProductForm({ product, onSave, onCancel, t }: ProductFor
                 type="text"
                 value={formData.strap}
                 onChange={(e) => setFormData({ ...formData, strap: e.target.value })}
-                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500"
+                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 placeholder="Oyster Bracelet"
+                disabled={!canEditAll}
               />
             </div>
             <div>
@@ -195,19 +204,21 @@ export default function ProductForm({ product, onSave, onCancel, t }: ProductFor
                 type="text"
                 value={formData.waterResistance}
                 onChange={(e) => setFormData({ ...formData, waterResistance: e.target.value })}
-                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500"
+                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 placeholder="100m"
+                disabled={!canEditAll}
               />
             </div>
           </div>
 
-          {/* 描述 */}
+          {/* 描述 - 只有完整权限可以编辑 */}
           <div>
             <label className="block text-sm font-medium text-slate-400 mb-2">{t("description")} (EN)</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 h-24 resize-none"
+              className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 h-24 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!canEditAll}
             />
           </div>
 
@@ -216,20 +227,22 @@ export default function ProductForm({ product, onSave, onCancel, t }: ProductFor
             <textarea
               value={formData.descriptionZh}
               onChange={(e) => setFormData({ ...formData, descriptionZh: e.target.value })}
-              className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 h-24 resize-none"
+              className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 h-24 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!canEditAll}
             />
           </div>
 
-          {/* 状态 */}
+          {/* 状态 - 只有完整权限可以编辑 */}
           <div className="flex items-center gap-3">
             <input
               type="checkbox"
               id="isActive"
               checked={formData.isActive}
               onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-              className="w-5 h-5 rounded border-slate-600 bg-slate-700 text-amber-500 focus:ring-amber-500"
+              className="w-5 h-5 rounded border-slate-600 bg-slate-700 text-amber-500 focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!canEditAll}
             />
-            <label htmlFor="isActive" className="text-slate-300">{t("active")}</label>
+            <label htmlFor="isActive" className={`text-slate-300 ${!canEditAll ? 'opacity-50' : ''}`}>{t("active")}</label>
           </div>
 
           {/* 按钮 */}
