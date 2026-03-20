@@ -187,11 +187,21 @@ export default function AdminPage() {
     }
   }, [activeTab, isLoggedIn]);
 
+  // Get auth headers
+  const getAuthHeaders = () => {
+    const token = sessionStorage.getItem("admin_token");
+    return {
+      "Authorization": token ? `Bearer ${token}` : "",
+    };
+  };
+
   // API Functions
   const fetchDashboard = async () => {
     setDataLoading(true);
     try {
-      const res = await fetch("/api/admin/dashboard");
+      const res = await fetch("/api/admin/dashboard", {
+        headers: getAuthHeaders(),
+      });
       if (!res.ok) throw new Error("Failed to fetch dashboard");
       const data = await res.json();
       setDashboardData(data);
@@ -205,7 +215,9 @@ export default function AdminPage() {
   const fetchProducts = async () => {
     setDataLoading(true);
     try {
-      const res = await fetch("/api/admin/products");
+      const res = await fetch("/api/admin/products", {
+        headers: getAuthHeaders(),
+      });
       if (!res.ok) throw new Error("Failed to fetch products");
       const data = await res.json();
       setProducts(data);
@@ -219,7 +231,9 @@ export default function AdminPage() {
   const fetchOrders = async () => {
     setDataLoading(true);
     try {
-      const res = await fetch("/api/admin/orders");
+      const res = await fetch("/api/admin/orders", {
+        headers: getAuthHeaders(),
+      });
       if (!res.ok) throw new Error("Failed to fetch orders");
       const data = await res.json();
       setOrders(data);
@@ -233,7 +247,9 @@ export default function AdminPage() {
   const fetchUsers = async () => {
     setDataLoading(true);
     try {
-      const res = await fetch("/api/admin/users");
+      const res = await fetch("/api/admin/users", {
+        headers: getAuthHeaders(),
+      });
       if (!res.ok) throw new Error("Failed to fetch users");
       const data = await res.json();
       setUsers(data);
@@ -246,7 +262,9 @@ export default function AdminPage() {
 
   const fetchWalletConfig = async () => {
     try {
-      const res = await fetch("/api/admin/wallet");
+      const res = await fetch("/api/admin/wallet", {
+        headers: getAuthHeaders(),
+      });
       if (res.ok) {
         const data = await res.json();
         setWalletConfig(data);
@@ -259,7 +277,9 @@ export default function AdminPage() {
   // WhatsApp Links
   const fetchWALinks = async () => {
     try {
-      const res = await fetch("/api/admin/whatsapp");
+      const res = await fetch("/api/admin/whatsapp", {
+        headers: getAuthHeaders(),
+      });
       if (res.ok) {
         const data = await res.json();
         setWALinks(data);
@@ -275,7 +295,10 @@ export default function AdminPage() {
     try {
       const res = await fetch("/api/admin/whatsapp", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
         body: JSON.stringify({
           name: newWALink.name,
           url: newWALink.url,
@@ -296,7 +319,10 @@ export default function AdminPage() {
     try {
       const res = await fetch("/api/admin/whatsapp", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
         body: JSON.stringify({ id, isActive: !currentStatus }),
       });
       if (!res.ok) throw new Error("Failed to update WA link");
@@ -311,6 +337,7 @@ export default function AdminPage() {
     try {
       const res = await fetch(`/api/admin/whatsapp?id=${id}`, {
         method: "DELETE",
+        headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error("Failed to delete WA link");
       await fetchWALinks();
@@ -324,7 +351,10 @@ export default function AdminPage() {
     try {
       const res = await fetch("/api/admin/products", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
         body: JSON.stringify(productData),
       });
       if (!res.ok) throw new Error("Failed to create product");
@@ -339,7 +369,10 @@ export default function AdminPage() {
     try {
       const res = await fetch("/api/admin/products", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
         body: JSON.stringify({ ...productData, id: editingProduct?.id }),
       });
       if (!res.ok) throw new Error("Failed to update product");
@@ -356,6 +389,7 @@ export default function AdminPage() {
     try {
       const res = await fetch(`/api/admin/products?id=${id}`, {
         method: "DELETE",
+        headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error("Failed to delete product");
       await fetchProducts();
@@ -369,7 +403,10 @@ export default function AdminPage() {
     try {
       const res = await fetch("/api/admin/orders", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
         body: JSON.stringify({ id: orderId, status, ...trackingInfo }),
       });
       if (!res.ok) throw new Error("Failed to update order");
@@ -386,7 +423,10 @@ export default function AdminPage() {
     try {
       const res = await fetch("/api/admin/users", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
         body: JSON.stringify(userData),
       });
       if (!res.ok) {
@@ -405,7 +445,10 @@ export default function AdminPage() {
     try {
       const res = await fetch("/api/admin/users", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
         body: JSON.stringify({ ...userData, id: editingUser?.id }),
       });
       if (!res.ok) throw new Error("Failed to update user");
@@ -423,6 +466,7 @@ export default function AdminPage() {
     try {
       const res = await fetch(`/api/admin/users?id=${id}`, {
         method: "DELETE",
+        headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error("Failed to delete user");
       await fetchUsers();
@@ -436,7 +480,10 @@ export default function AdminPage() {
     try {
       const res = await fetch("/api/admin/wallet", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
         body: JSON.stringify({
           ...walletConfig,
           updatedBy: currentUser?.id,
