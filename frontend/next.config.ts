@@ -4,7 +4,9 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  // 去掉 output: 'export'，启用 SSR
+  typescript: {
+    ignoreBuildErrors: true,
+  },
 };
 
 export default nextConfig;

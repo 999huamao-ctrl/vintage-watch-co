@@ -42,23 +42,9 @@ export default async function ProductPage({ params }: Props) {
 
 // 为了静态生成，我们需要知道所有产品ID
 export async function generateStaticParams() {
-  try {
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    
-    const res = await fetch(`${baseUrl}/api/products`, { cache: 'no-store' });
-    const data = await res.json();
-    
-    if (!data.success) return [];
-    
-    return data.data.map((product: any) => ({
-      id: product.id,
-    }));
-  } catch (error) {
-    console.error('Failed to generate static params:', error);
-    return [];
-  }
+  // 构建时不预生成任何页面，全部使用 SSR
+  // 避免构建时 API 未运行导致的错误
+  return [];
 }
 
 export const dynamic = 'force-dynamic';
