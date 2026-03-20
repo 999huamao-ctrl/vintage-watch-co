@@ -1,22 +1,26 @@
 export interface Product {
   id: string;
   name: string;
-  description: string;
+  description?: string;
+  brand?: string;
   price: number;
   originalPrice?: number;
   image: string;
-  images: string[];
+  images?: string[];
   category: string;
-  specs: {
-    caseSize: string;
-    movement: string;
-    strap: string;
-    waterResistance: string;
-    crystal: string;
-    caseMaterial: string;
+  specs?: {
+    caseSize?: string;
+    movement?: string;
+    strap?: string;
+    waterResistance?: string;
+    crystal?: string;
+    caseMaterial?: string;
+    dial?: string;
+    powerReserve?: string;
+    functions?: string;
   };
-  inStock: boolean;
-  stock: number;
+  inStock?: boolean;
+  stock?: number;
   badge?: string;
 }
 

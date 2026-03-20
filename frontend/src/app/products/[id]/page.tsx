@@ -7,22 +7,25 @@ import ProductDetails from "../../product/[id]/ProductDetails";
 interface Product {
   id: string;
   name: string;
-  description: string;
   price: number;
   originalPrice?: number;
   image: string;
-  images: string[];
+  images?: string[];
   category: string;
+  brand?: string;
   stock: number;
-  specs: {
-    caseSize: string;
-    movement: string;
-    strap: string;
-    waterResistance: string;
-    crystal: string;
-    caseMaterial: string;
+  specs?: {
+    caseSize?: string;
+    movement?: string;
+    strap?: string;
+    waterResistance?: string;
+    crystal?: string;
+    caseMaterial?: string;
+    dial?: string;
+    powerReserve?: string;
+    functions?: string;
   };
-  inStock: boolean;
+  inStock?: boolean;
   badge?: string;
 }
 

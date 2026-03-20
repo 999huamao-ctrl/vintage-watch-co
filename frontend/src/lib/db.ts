@@ -93,16 +93,20 @@ export async function createProduct(data: {
   nameJa?: string;
   price: number;
   originalPrice?: number;
+  brand: string;              // 品牌名称
   category: string;
-  description: string;
-  descriptionZh?: string;
-  image: string;
-  images?: string[];
+  image: string;              // 首图URL
+  detailImage1?: string;      // 细节图1
+  detailImage2?: string;      // 细节图2
+  detailImage3?: string;      // 细节图3
+  detailImage4?: string;      // 细节图4
   stock?: number;
-  caseSize?: string;
-  movement?: string;
-  strap?: string;
-  waterResistance?: string;
+  // 规格参数
+  caseMaterial?: string;      // 表壳
+  dial?: string;              // 表盘
+  movement?: string;          // 机芯
+  powerReserve?: string;      // 动力储存
+  functions?: string;         // 功能
 }) {
   return prisma.product.create({
     data,
@@ -119,17 +123,20 @@ export async function updateProduct(id: string, data: Partial<{
   nameJa?: string;
   price: number;
   originalPrice?: number;
+  brand: string;
   category: string;
-  description: string;
-  descriptionZh?: string;
   image: string;
-  images?: string[];
+  detailImage1?: string;
+  detailImage2?: string;
+  detailImage3?: string;
+  detailImage4?: string;
   stock?: number;
   isActive?: boolean;
-  caseSize?: string;
+  caseMaterial?: string;
+  dial?: string;
   movement?: string;
-  strap?: string;
-  waterResistance?: string;
+  powerReserve?: string;
+  functions?: string;
 }>) {
   return prisma.product.update({
     where: { id },
@@ -544,5 +551,61 @@ export async function getUserActivities(filters?: { userId?: string; sessionId?:
     where: filters,
     orderBy: { createdAt: "desc" },
     take: 100,
+  });
+}
+
+// ============== WhatsApp 链接管理 ==============
+
+export async function getWhatsAppLinks() {
+  return prisma.whatsAppLink.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function getActiveWhatsAppLinks() {
+  return prisma.whatsAppLink.findMany({
+    where: { isActive: true },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function getRandomWhatsAppLink() {
+  const links = await prisma.whatsAppLink.findMany({
+    where: { isActive: true },
+  });
+  if (links.length === 0) return null;
+  return links[Math.floor(Math.random() * links.length)];
+}
+
+export async function createWhatsAppLink(data: {
+  name: string;
+  url: string;
+  createdBy: string;
+}) {
+  return prisma.whatsAppLink.create({
+    data: {
+      ...data,
+      isActive: true,
+    },
+  });
+}
+
+export async function updateWhatsAppLink(
+  id: string,
+  data: Partial<{
+    name: string;
+    url: string;
+    isActive: boolean;
+  }>
+) {
+  return prisma.whatsAppLink.update({
+    where: { id },
+    data,
+  });
+}
+
+export async function deleteWhatsAppLink(id: string) {
+  return prisma.whatsAppLink.delete({
+    where: { id },
   });
 }

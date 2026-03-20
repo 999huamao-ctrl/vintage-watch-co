@@ -25,6 +25,7 @@ model User {
 
 model Product {
   id              String         @id @default(uuid())
+  // 产品名称（多语言）
   name            String
   nameZh          String?
   nameDe          String?
@@ -32,21 +33,30 @@ model Product {
   nameEs          String?
   nameIt          String?
   nameJa          String?
+  // 价格
   price           Decimal        @db.Decimal(10, 2)
   originalPrice   Decimal?       @db.Decimal(10, 2)
+  // 品牌和分类
+  brand           String?         // 品牌名称
   category        String
-  description     String
-  descriptionZh   String?
-  image           String
-  images          String[]
+  // 产品图片（URL）
+  image           String         // 首图URL（必填）
+  detailImage1    String?        // 细节图1
+  detailImage2    String?        // 细节图2
+  detailImage3    String?        // 细节图3
+  detailImage4    String?        // 细节图4
+  // 库存和状态
   stock           Int            @default(0)
   isActive        Boolean        @default(true)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
-  caseSize        String?
-  movement        String?
-  strap           String?
-  waterResistance String?
+  // 规格参数
+  caseMaterial    String?        // 表壳
+  dial            String?        // 表盘
+  movement        String?        // 机芯
+  powerReserve    String?        // 动力储存
+  functions       String?        // 功能
+  // 关联
   inventoryLogs   InventoryLog[]
   orderItems      OrderItem[]
 
@@ -211,6 +221,18 @@ model WalletConfig {
   updatedBy   String
 
   @@map("wallet_config")
+}
+
+model WhatsAppLink {
+  id        String   @id @default(uuid())
+  name      String   // 链接名称/标识
+  url       String   // WA链接
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String   // 创建者ID
+
+  @@map("whatsapp_links")
 }
 
 enum UserRole {

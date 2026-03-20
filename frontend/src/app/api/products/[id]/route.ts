@@ -3,24 +3,25 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export async function GET(request: Request) {
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { searchParams } = new URL(request.url);
-    const category = searchParams.get('category');
+    const { id } = await params;
 
-    const products = await prisma.product.findMany({
-      where: {
-        isActive: true,
-        ...(category ? {
-          category: category === 'women'
-            ? { in: ['Lady-Datejust', 'Pearlmaster'] }
-            : { notIn: ['Lady-Datejust', 'Pearlmaster'] }
-        } : {}),
-      },
-      orderBy: { createdAt: 'desc' },
+    const product = await prisma.product.findUnique({
+      where: { id },
     });
 
-    const formattedProducts = products.map(product => ({
+    if (!product) {
+      return NextResponse.json(
+        { success: false, error: 'Product not found' },
+        { status: 404 }
+      );
+    }
+
+    const formattedProduct = {
       id: product.id,
       name: product.name,
       brand: product.brand,
@@ -45,17 +46,16 @@ export async function GET(request: Request) {
       },
       inStock: product.stock > 0,
       badge: product.stock < 10 ? 'Hot' : undefined
-    }));
+    };
 
-    return NextResponse.json({ 
-      success: true, 
-      data: formattedProducts,
-      count: formattedProducts.length 
+    return NextResponse.json({
+      success: true,
+      data: formattedProduct,
     });
   } catch (error) {
-    console.error('Failed to fetch products:', error);
+    console.error('Failed to fetch product:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch products' },
+      { success: false, error: 'Failed to fetch product' },
       { status: 500 }
     );
   }

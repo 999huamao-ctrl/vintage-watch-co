@@ -57,6 +57,7 @@ export const translations = {
     addProduct: "Add Product",
     editProduct: "Edit Product",
     product: "Product",
+    brand: "Brand",
     category: "Category",
     price: "Price",
     stock: "Stock",
@@ -71,6 +72,16 @@ export const translations = {
     searchProducts: "Search products...",
     noProducts: "No products found",
     importExport: "Import/Export products",
+    // 规格参数
+    specifications: "Specifications",
+    caseMaterial: "Case Material",
+    dial: "Dial",
+    powerReserve: "Power Reserve",
+    functions: "Functions",
+    // 图片
+    productImages: "Product Images",
+    mainImage: "Main Image",
+    detailImage: "Detail Image",
     
     // 订单管理
     orderManagement: "Orders Management",
@@ -176,6 +187,16 @@ export const translations = {
     usdtAddress: "USDT Address (TRC20)",
     enterAddress: "Enter TRC20 address",
     
+    // WhatsApp Links
+    links: "Links",
+    addNewLink: "Add New Link",
+    existingLinks: "Existing Links",
+    noLinksYet: "No links yet",
+    adding: "Adding...",
+    activate: "Activate",
+    deactivate: "Deactivate",
+    isActive: "Active",
+    
     // 删除确认
     deleteConfirm: "Are you sure you want to delete this item?",
     deleteWarning: "This action cannot be undone.",
@@ -235,6 +256,7 @@ export const translations = {
     addProduct: "添加商品",
     editProduct: "编辑商品",
     product: "商品",
+    brand: "品牌",
     category: "分类",
     price: "价格",
     stock: "库存",
@@ -249,6 +271,16 @@ export const translations = {
     searchProducts: "搜索商品...",
     noProducts: "未找到商品",
     importExport: "导入/导出商品",
+    // 规格参数
+    specifications: "规格参数",
+    caseMaterial: "表壳材质",
+    dial: "表盘",
+    powerReserve: "动力储存",
+    functions: "功能",
+    // 图片
+    productImages: "商品图片",
+    mainImage: "主图",
+    detailImage: "细节图",
     
     // 订单管理
     orderManagement: "订单管理",
@@ -353,6 +385,16 @@ export const translations = {
     l3Desc: "60%利润 - STAR的钱包",
     usdtAddress: "USDT地址（TRC20）",
     enterAddress: "输入TRC20地址",
+    
+    // WhatsApp链接
+    links: "链接",
+    addNewLink: "添加新链接",
+    existingLinks: "现有链接",
+    noLinksYet: "暂无链接",
+    adding: "添加中...",
+    activate: "启用",
+    deactivate: "停用",
+    isActive: "启用",
     
     // 删除确认
     deleteConfirm: "确定要删除此项吗？",

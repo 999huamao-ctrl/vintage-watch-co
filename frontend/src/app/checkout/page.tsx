@@ -117,7 +117,7 @@ export default function CheckoutPage() {
             name: item.product.name,
             price: item.product.price,
             quantity: item.quantity,
-            description: item.product.description,
+            description: item.product.name,
           })),
           customer: {
             email: formData.email,

@@ -101,3 +101,24 @@ export async function requireSuperAdmin(request: Request): Promise<NextResponse 
   
   return null;
 }
+
+// 检查用户是否为 ADMIN 或 SUPERADMIN
+export async function requireAdmin(request: Request): Promise<NextResponse | null> {
+  const user = await getCurrentUser(request);
+  
+  if (!user) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+  
+  if (user.role !== "ADMIN" && user.role !== "SUPERADMIN") {
+    return NextResponse.json(
+      { error: "Forbidden - Admin required" },
+      { status: 403 }
+    );
+  }
+  
+  return null;
+}

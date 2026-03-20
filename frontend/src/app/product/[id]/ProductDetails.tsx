@@ -4,29 +4,30 @@ import { shippingRates } from "@/lib/data";
 import { useLanguage } from "@/lib/language";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ChevronLeft, Plus, Minus, ShoppingCart, Truck, Shield, RotateCcw, Star, Clock, Check } from "lucide-react";
+import { ChevronLeft, Plus, Minus, ShoppingCart, Truck, Shield, RotateCcw, Star, Clock, Check, MessageCircle } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import Navbar from "@/components/Navbar";
 
 interface Product {
   id: string;
   name: string;
-  description: string;
   price: number;
   originalPrice?: number;
   image: string;
-  images: string[];
+  detailImage1?: string;
+  detailImage2?: string;
+  detailImage3?: string;
+  detailImage4?: string;
   category: string;
-  specs: {
-    caseSize: string;
-    movement: string;
-    strap: string;
-    waterResistance: string;
-    crystal: string;
-    caseMaterial: string;
-  };
-  inStock: boolean;
+  brand?: string;
   stock: number;
+  // 规格参数
+  caseMaterial?: string;
+  dial?: string;
+  movement?: string;
+  powerReserve?: string;
+  functions?: string;
+  inStock?: boolean;
   badge?: string;
 }
 
@@ -42,9 +43,34 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   const [activeTab, setActiveTab] = useState("description");
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState({ hours: 23, minutes: 59, seconds: 59 });
+  const [whatsAppLink, setWhatsAppLink] = useState<string | null>(null);
   
-  const productImages = product.images || [product.image];
+  // 构建图片数组（首图 + 最多4张细节图）
+  const productImages = [product.image];
+  if (product.detailImage1) productImages.push(product.detailImage1);
+  if (product.detailImage2) productImages.push(product.detailImage2);
+  if (product.detailImage3) productImages.push(product.detailImage3);
+  if (product.detailImage4) productImages.push(product.detailImage4);
+  
   const addItem = useCart((state) => state.addItem);
+
+  // 获取随机 WhatsApp 链接
+  useEffect(() => {
+    const fetchWhatsAppLink = async () => {
+      try {
+        const res = await fetch('/api/whatsapp');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setWhatsAppLink(data.data.url);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch WhatsApp link:', err);
+      }
+    };
+    fetchWhatsAppLink();
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -63,7 +89,6 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   }, []);
 
   const handleAddToCart = () => {
-    // 使用原价，不使用折扣
     for (let i = 0; i < quantity; i++) {
       addItem(product);
     }
@@ -71,10 +96,15 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
     setTimeout(() => setAdded(false), 2000);
   };
 
+  const handleWhatsAppClick = () => {
+    if (whatsAppLink) {
+      window.open(whatsAppLink, '_blank');
+    }
+  };
+
   const thumbnails = productImages.map((img, i) => ({
-    label: ["Front", "Detail", "Worn"][i] || `View ${i + 1}`,
+    label: i === 0 ? "Front" : `Detail ${i}`,
     image: img,
-    icon: ["◯", "✦", "⌚"][i] || "◉"
   }));
 
   const shipping = shippingRates[selectedCountry];
@@ -120,7 +150,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                   {product.badge}
                 </div>
               )}
-              <div className="absolute top-6 right-6 bg-rose-500 text-white text-sm font-bold px-4 py-2 rounded-full z-10 shadow-lg">
+              <div className="absolute top-6 right-6 bg-rose-500 text-white text-sm font-bold px-3 py-1 rounded-full z-10 shadow-lg">
                 -30%
               </div>
               
@@ -133,32 +163,35 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
               />
             </div>
 
-            <div className="grid grid-cols-6 gap-3">
-              {thumbnails.map((thumb, i) => (
-                <button
-                  key={i}
-                  onClick={() => setActiveImageIndex(i)}
-                  className={`aspect-square rounded-xl overflow-hidden transition-all hover:scale-105 hover:shadow-lg ${
-                    i === activeImageIndex ? 'ring-2 ring-amber-500 ring-offset-2 shadow-lg' : 'opacity-70 hover:opacity-100'
-                  }`}
-                >
-                  <img 
-                    src={thumb.image} 
-                    alt={thumb.label}
-                    loading="lazy"
-                    decoding="async"
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
+            {/* Thumbnails - 最多显示5张 */}
+            {productImages.length > 1 && (
+              <div className={`grid gap-3 ${productImages.length <= 3 ? 'grid-cols-3' : productImages.length === 4 ? 'grid-cols-4' : 'grid-cols-5'}`}>
+                {thumbnails.map((thumb, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveImageIndex(i)}
+                    className={`aspect-square rounded-xl overflow-hidden transition-all hover:scale-105 hover:shadow-lg ${
+                      i === activeImageIndex ? 'ring-2 ring-amber-500 ring-offset-2 shadow-lg' : 'opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    <img 
+                      src={thumb.image} 
+                      alt={thumb.label}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Right - Product Info */}
           <div className="space-y-6">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm text-amber-600 font-medium">{product.category}</span>
+                <span className="text-sm text-amber-600 font-medium">{product.brand}</span>
                 <span className="text-gray-900">·</span>
                 <span className="text-sm text-green-600 font-medium flex items-center gap-1">
                   <Check className="w-4 h-4" /> {t('product.inStock')}
@@ -182,13 +215,15 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                 <span className="text-4xl font-bold text-stone-900">
                   €{product.price}
                 </span>
-                <span className="text-xl text-gray-800 line-through">€{Math.round(product.price * 1.4)}</span>
-                <span className="bg-rose-100 text-rose-600 text-sm font-medium px-3 py-1 rounded-full">
-                  {t('product.save')} €{Math.round(product.price * 0.4)}
-                </span>
+                {product.originalPrice && (
+                  <>
+                    <span className="text-xl text-gray-800 line-through">€{product.originalPrice}</span>
+                    <span className="bg-rose-100 text-rose-600 text-sm font-medium px-3 py-1 rounded-full">
+                      {t('product.save')} €{Math.round(product.originalPrice - product.price)}
+                    </span>
+                  </>
+                )}
               </div>
-
-              <p className="text-gray-800 leading-relaxed mb-4">{product.description}</p>
             </div>
 
             {/* Quantity & Add to Cart */}
@@ -239,6 +274,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                 </div>
               </div>
 
+              {/* Add to Cart Button */}
               <button
                 onClick={handleAddToCart}
                 className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${
@@ -249,6 +285,15 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
               >
                 <ShoppingCart className="w-5 h-5" />
                 {added ? t('product.addedToCart') : `${t('product.addToCart')} - €${(product.price * quantity).toFixed(2)}`}
+              </button>
+
+              {/* WhatsApp Button */}
+              <button
+                onClick={handleWhatsAppClick}
+                className="w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 bg-green-500 text-white hover:bg-green-600 hover:shadow-lg transition-all"
+              >
+                <MessageCircle className="w-5 h-5" />
+                通过WhatsApp获取优惠
               </button>
 
               <div className="text-center pt-4 border-t">
@@ -306,7 +351,9 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
               <div className="p-6">
                 {activeTab === "description" && (
                   <div className="space-y-4">
-                    <p className="text-gray-800 leading-relaxed">{product.description}</p>
+                    <p className="text-gray-800 leading-relaxed">
+                      {product.brand} {product.name} - {t('product.premiumWatch')}
+                    </p>
                     <div className="bg-stone-50 rounded-lg p-4">
                       <h4 className="font-medium mb-2 text-gray-900">{t('product.whatsInBox')}</h4>
                       <ul className="text-sm text-gray-900 space-y-1">
@@ -323,17 +370,19 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                 {activeTab === "specs" && (
                   <div className="grid grid-cols-2 gap-4">
                     {[
-                      { label: t('product.caseSize'), value: product.specs.caseSize },
-                      { label: t('product.caseMaterial'), value: product.specs.caseMaterial },
-                      { label: t('product.movement'), value: product.specs.movement },
-                      { label: t('product.strap'), value: product.specs.strap },
-                      { label: t('product.waterResistance'), value: product.specs.waterResistance },
-                      { label: t('product.crystal'), value: product.specs.crystal },
+                      { label: t('product.brand'), value: product.brand },
+                      { label: t('product.caseMaterial'), value: product.caseMaterial },
+                      { label: t('product.dial'), value: product.dial },
+                      { label: t('product.movement'), value: product.movement },
+                      { label: t('product.powerReserve'), value: product.powerReserve },
+                      { label: t('product.functions'), value: product.functions },
                     ].map(({ label, value }) => (
-                      <div key={label} className="py-2 border-b last:border-0">
-                        <p className="text-sm text-gray-900">{label}</p>
-                        <p className="font-medium text-gray-900">{value}</p>
-                      </div>
+                      value && (
+                        <div key={label} className="py-2 border-b last:border-0">
+                          <p className="text-sm text-gray-900">{label}</p>
+                          <p className="font-medium text-gray-900">{value}</p>
+                        </div>
+                      )
                     ))}
                   </div>
                 )}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Package, Plus, Edit2, Trash2, Download, Search, Save, X, Wallet, Settings, Lock, LogOut, Users, Truck, Shield, UserCircle, Globe, BarChart3, TrendingUp, DollarSign, ShoppingCart, Trash } from "lucide-react";
+import { Package, Plus, Edit2, Trash2, Download, Search, Save, X, Wallet, Settings, Lock, LogOut, Users, Truck, Shield, UserCircle, Globe, BarChart3, TrendingUp, DollarSign, ShoppingCart, Trash, MessageCircle, Check } from "lucide-react";
 import { translations, Language, TranslationKey } from "./i18n";
 import ProductForm from "./ProductForm";
 import OrderDetail from "./OrderDetail";
@@ -23,16 +23,21 @@ interface Product {
   nameZh?: string;
   price: number;
   originalPrice?: number;
+  brand: string;           // 品牌名称
   category: string;
   stock: number;
   isActive: boolean;
-  image: string;
-  description?: string;
-  descriptionZh?: string;
-  caseSize?: string;
-  movement?: string;
-  strap?: string;
-  waterResistance?: string;
+  image: string;           // 首图URL
+  detailImage1?: string;   // 细节图1
+  detailImage2?: string;   // 细节图2
+  detailImage3?: string;   // 细节图3
+  detailImage4?: string;   // 细节图4
+  // 规格参数
+  caseMaterial?: string;   // 表壳
+  dial?: string;           // 表盘
+  movement?: string;       // 机芯
+  powerReserve?: string;   // 动力储存
+  functions?: string;      // 功能
 }
 
 interface Order {
@@ -128,6 +133,11 @@ export default function AdminPage() {
     l2Operating: "",
     l3Profit: "",
   });
+
+  // WhatsApp Links
+  const [waLinks, setWALinks] = useState<{ id: string; name: string; url: string; isActive: boolean }[]>([]);
+  const [newWALink, setNewWALink] = useState({ name: "", url: "" });
+  const [creatingWALink, setCreatingWALink] = useState(false);
   
   const ROLE_PERMISSIONS = getRolePermissions(t);
 
@@ -172,6 +182,7 @@ export default function AdminPage() {
         break;
       case "settings":
         fetchWalletConfig();
+        fetchWALinks();
         break;
     }
   }, [activeTab, isLoggedIn]);
@@ -242,6 +253,69 @@ export default function AdminPage() {
       }
     } catch (err) {
       console.error("Failed to load wallet config");
+    }
+  };
+
+  // WhatsApp Links
+  const fetchWALinks = async () => {
+    try {
+      const res = await fetch("/api/admin/whatsapp");
+      if (res.ok) {
+        const data = await res.json();
+        setWALinks(data);
+      }
+    } catch (err) {
+      console.error("Failed to load WA links");
+    }
+  };
+
+  const handleCreateWALink = async () => {
+    if (!newWALink.name.trim() || !newWALink.url.trim()) return;
+    setCreatingWALink(true);
+    try {
+      const res = await fetch("/api/admin/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newWALink.name,
+          url: newWALink.url,
+          createdBy: currentUser?.id || "admin",
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to create WA link");
+      await fetchWALinks();
+      setNewWALink({ name: "", url: "" });
+    } catch (err) {
+      setDataError("Failed to create WA link");
+    } finally {
+      setCreatingWALink(false);
+    }
+  };
+
+  const handleToggleWALink = async (id: string, currentStatus: boolean) => {
+    try {
+      const res = await fetch("/api/admin/whatsapp", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, isActive: !currentStatus }),
+      });
+      if (!res.ok) throw new Error("Failed to update WA link");
+      await fetchWALinks();
+    } catch (err) {
+      setDataError("Failed to update WA link");
+    }
+  };
+
+  const handleDeleteWALink = async (id: string) => {
+    if (!confirm(t("deleteConfirm"))) return;
+    try {
+      const res = await fetch(`/api/admin/whatsapp?id=${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete WA link");
+      await fetchWALinks();
+    } catch (err) {
+      setDataError("Failed to delete WA link");
     }
   };
 
@@ -570,6 +644,7 @@ export default function AdminPage() {
               <thead className="bg-slate-900/50">
                 <tr>
                   <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("product")}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("brand")}</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("price")}</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("stock")}</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">{t("status")}</th>
@@ -581,11 +656,21 @@ export default function AdminPage() {
                   <tr key={product.id} className="hover:bg-slate-700/30">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center">
-                          <Package className="w-5 h-5 text-slate-400" />
+                        <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center overflow-hidden">
+                          {product.image ? (
+                            <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <Package className="w-5 h-5 text-slate-400" />
+                          )}
                         </div>
-                        <span className="text-white">{product.name}</span>
+                        <div>
+                          <span className="text-white block">{product.name}</span>
+                          <span className="text-slate-500 text-xs">{product.category}</span>
+                        </div>
                       </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-slate-300">{product.brand || "-"}</span>
                     </td>
                     <td className="px-4 py-3 text-slate-300">€{Number(product.price).toFixed(2)}</td>
                     <td className="px-4 py-3">
@@ -729,6 +814,7 @@ export default function AdminPage() {
       <div className="space-y-6">
         <h2 className="text-xl font-semibold text-white">{t("settings")}</h2>
         
+        {/* Wallet Configuration */}
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
           <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
             <Wallet className="w-5 h-5 text-amber-400" />
@@ -769,6 +855,82 @@ export default function AdminPage() {
               <Save className="w-4 h-4" />
               {t("saveChanges")}
             </button>
+          </div>
+        </div>
+
+        {/* WhatsApp Links Management */}
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+          <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+            <MessageCircle className="w-5 h-5 text-green-400" />
+            WhatsApp {t("links") || "Links"}
+          </h3>
+          <p className="text-sm text-slate-400 mb-4">
+            管理前台「通过WhatsApp获取优惠」按钮的跳转链接。多个链接将随机分配。
+          </p>
+          
+          {/* Add New WA Link */}
+          <div className="bg-slate-900/50 rounded-lg p-4 mb-4">
+            <h4 className="text-sm font-medium text-white mb-3">{t("addNewLink") || "Add New Link"}</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <input
+                type="text"
+                placeholder="链接名称 (如: 客服1)"
+                value={newWALink.name}
+                onChange={(e) => setNewWALink({ ...newWALink, name: e.target.value })}
+                className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-amber-500"
+              />
+              <input
+                type="url"
+                placeholder="WhatsApp链接 (https://wa.me/...)"
+                value={newWALink.url}
+                onChange={(e) => setNewWALink({ ...newWALink, url: e.target.value })}
+                className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-amber-500 md:col-span-2"
+              />
+            </div>
+            <button
+              onClick={handleCreateWALink}
+              disabled={!newWALink.name.trim() || !newWALink.url.trim() || creatingWALink}
+              className="mt-3 flex items-center gap-2 bg-green-500 hover:bg-green-400 disabled:bg-slate-600 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              {creatingWALink ? t("adding") || "Adding..." : t("add") || "Add"}
+            </button>
+          </div>
+
+          {/* WA Links List */}
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-white mb-2">{t("existingLinks") || "Existing Links"}</h4>
+            {waLinks.length === 0 ? (
+              <p className="text-slate-500 text-sm">{t("noLinksYet") || "No links yet"}</p>
+            ) : (
+              waLinks.map((link) => (
+                <div key={link.id} className="flex items-center justify-between bg-slate-900/50 rounded-lg p-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-medium text-sm truncate">{link.name}</p>
+                    <p className="text-slate-400 text-xs truncate">{link.url}</p>
+                  </div>
+                  <div className="flex items-center gap-2 ml-4">
+                    <span className={`px-2 py-1 rounded-full text-xs ${link.isActive ? 'bg-green-500/20 text-green-400' : 'bg-slate-500/20 text-slate-400'}`}>
+                      {link.isActive ? t("active") : t("inactive")}
+                    </span>
+                    <button
+                      onClick={() => handleToggleWALink(link.id, link.isActive)}
+                      className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors"
+                      title={link.isActive ? t("deactivate") || "Deactivate" : t("activate") || "Activate"}
+                    >
+                      {link.isActive ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteWALink(link.id)}
+                      className="p-1.5 hover:bg-red-500/20 rounded text-slate-400 hover:text-red-400 transition-colors"
+                      title={t("delete")}
+                    >
+                      <Trash className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
