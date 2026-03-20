@@ -1,10 +1,1 @@
-{
-"version": 2,
-"framework": "nextjs",
-"routes": [
-{
-"src": "/product/([^/]+)",
-"dest": "/product/[id]?id=$1"
-}
-]
-}
+{\"version\":2,\"name\":\"vintage-watch-co\",\"builds\":[{\"src\":\"package.json\",\"use\":\"@vercel/next\"}]}
