@@ -9,11 +9,14 @@ export async function GET(request: Request) {
     const authError = await checkAdminPermission(request, ["users"]);
     if (authError) return authError;
     
+    console.log("Fetching users, DATABASE_URL exists:", !!process.env.DATABASE_URL);
+    
     const users = await getUsers();
     return NextResponse.json(users);
   } catch (error) {
+    console.error("Failed to fetch users:", error);
     return NextResponse.json(
-      { error: "Failed to fetch users" },
+      { error: "Failed to fetch users", details: String(error) },
       { status: 500 }
     );
   }
