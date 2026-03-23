@@ -24,41 +24,42 @@ model User {
 }
 
 model Product {
-  id              String         @id @default(uuid())
-  // 产品名称（多语言）
-  name            String
-  nameZh          String?
-  nameDe          String?
-  nameFr          String?
-  nameEs          String?
-  nameIt          String?
-  nameJa          String?
-  // 价格
-  price           Decimal        @db.Decimal(10, 2)
-  originalPrice   Decimal?       @db.Decimal(10, 2)
-  // 品牌和分类
-  brand           String?         // 品牌名称
-  category        String
-  // 产品图片（URL）
-  image           String         // 首图URL（必填）
-  detailImage1    String?        // 细节图1
-  detailImage2    String?        // 细节图2
-  detailImage3    String?        // 细节图3
-  detailImage4    String?        // 细节图4
-  // 库存和状态
-  stock           Int            @default(0)
-  isActive        Boolean        @default(true)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  // 规格参数
-  caseMaterial    String?        // 表壳
-  dial            String?        // 表盘
-  movement        String?        // 机芯
-  powerReserve    String?        // 动力储存
-  functions       String?        // 功能
-  // 关联
-  inventoryLogs   InventoryLog[]
-  orderItems      OrderItem[]
+  id               String         @id @default(uuid())
+  name             String
+  nameZh           String?
+  nameDe           String?
+  nameFr           String?
+  nameEs           String?
+  nameIt           String?
+  nameJa           String?
+  price            Decimal        @db.Decimal(10, 2)
+  originalPrice    Decimal?       @db.Decimal(10, 2)
+  category         String
+  image            String
+  stock            Int            @default(0)
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  movement         String?
+  brand            String?
+  caseMaterial     String?
+  detailImage1     String?
+  detailImage2     String?
+  detailImage3     String?
+  detailImage4     String?
+  dial             String?
+  functions        String?
+  powerReserve     String?
+  // 运营字段（从Bitable导入，仅后台显示）
+  productUrl       String?        @map("product_url")
+  waterResistance  String?        @map("water_resistance")
+  costPrice        Decimal?       @db.Decimal(10, 2) @map("cost_price")
+  sku              String?
+  weight           Decimal?       @db.Decimal(10, 3)
+  warehouse        String?
+  description      String?        @db.Text
+  inventoryLogs    InventoryLog[]
+  orderItems       OrderItem[]
 
   @@map("products")
 }
@@ -225,12 +226,12 @@ model WalletConfig {
 
 model WhatsAppLink {
   id        String   @id @default(uuid())
-  name      String   // 链接名称/标识
-  url       String   // WA链接
+  name      String
+  url       String
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  createdBy String   // 创建者ID
+  createdBy String
 
   @@map("whatsapp_links")
 }

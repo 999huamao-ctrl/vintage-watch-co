@@ -25,6 +25,14 @@ interface Product {
   movement?: string;       // 机芯
   powerReserve?: string;   // 动力储存
   functions?: string;      // 功能
+  // 运营字段（仅后台显示）
+  productUrl?: string;     // 产品URL
+  waterResistance?: string;// 防水深度
+  costPrice?: number;      // 进货价
+  sku?: string;            // SKU编码
+  weight?: number;         // 重量(kg)
+  warehouse?: string;      // 仓库
+  description?: string;    // 描述
 }
 
 interface ProductFormProps {
@@ -65,6 +73,14 @@ export default function ProductForm({ product, onSave, onCancel, t, canEditAll =
     movement: product?.movement || "",
     powerReserve: product?.powerReserve || "",
     functions: product?.functions || "",
+    // 运营字段
+    productUrl: product?.productUrl || "",
+    waterResistance: product?.waterResistance || "",
+    costPrice: product?.costPrice || 0,
+    sku: product?.sku || "",
+    weight: product?.weight || 0,
+    warehouse: product?.warehouse || "",
+    description: product?.description || "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -358,6 +374,112 @@ export default function ProductForm({ product, onSave, onCancel, t, canEditAll =
                   className={inputClass('functions')}
                   disabled={!canEditAll}
                   placeholder="如: Date, Chronograph"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 运营信息（仅后台显示） */}
+          <div className="border-t border-slate-700 pt-6">
+            <h3 className="text-lg font-medium text-white mb-4">运营信息（仅后台可见）</h3>
+            
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">
+                  SKU编码
+                </label>
+                <input
+                  type="text"
+                  value={formData.sku}
+                  onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                  className={inputClass('sku')}
+                  disabled={!canEditAll}
+                  placeholder="如: RX-SUB-001"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">
+                  进货价 (USD)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.costPrice}
+                  onChange={(e) => setFormData({ ...formData, costPrice: parseFloat(e.target.value) })}
+                  className={inputClass('costPrice')}
+                  disabled={!canEditAll}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">
+                  重量 (kg)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.weight}
+                  onChange={(e) => setFormData({ ...formData, weight: parseFloat(e.target.value) })}
+                  className={inputClass('weight')}
+                  disabled={!canEditAll}
+                  placeholder="如: 0.35"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">
+                  仓库
+                </label>
+                <input
+                  type="text"
+                  value={formData.warehouse}
+                  onChange={(e) => setFormData({ ...formData, warehouse: e.target.value })}
+                  className={inputClass('warehouse')}
+                  disabled={!canEditAll}
+                  placeholder="如: CN-1"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">
+                  防水深度
+                </label>
+                <input
+                  type="text"
+                  value={formData.waterResistance}
+                  onChange={(e) => setFormData({ ...formData, waterResistance: e.target.value })}
+                  className={inputClass('waterResistance')}
+                  disabled={!canEditAll}
+                  placeholder="如: 300M"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">
+                  产品URL
+                </label>
+                <input
+                  type="url"
+                  value={formData.productUrl}
+                  onChange={(e) => setFormData({ ...formData, productUrl: e.target.value })}
+                  className={inputClass('productUrl')}
+                  disabled={!canEditAll}
+                  placeholder="https://..."
+                />
+              </div>
+              
+              <div className="col-span-3">
+                <label className="block text-sm font-medium text-slate-400 mb-2">
+                  描述
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className={inputClass('description')}
+                  disabled={!canEditAll}
+                  rows={3}
+                  placeholder="产品简短描述..."
                 />
               </div>
             </div>
