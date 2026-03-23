@@ -4,7 +4,7 @@ import { shippingRates } from "@/lib/data";
 import { useLanguage } from "@/lib/language";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ChevronLeft, Plus, Minus, ShoppingCart, Truck, Shield, RotateCcw, Star, Clock, Check, MessageCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Minus, ShoppingCart, Truck, Shield, RotateCcw, Star, Clock, Check, MessageCircle } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import Navbar from "@/components/Navbar";
 
@@ -49,6 +49,8 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState({ hours: 23, minutes: 59, seconds: 59 });
   const [whatsAppLink, setWhatsAppLink] = useState<string | null>(null);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
   
   // 构建图片数组（首图 + 最多4张细节图）
   const productImages = [product.image];
@@ -56,6 +58,16 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   if (product.detailImage2) productImages.push(product.detailImage2);
   if (product.detailImage3) productImages.push(product.detailImage3);
   if (product.detailImage4) productImages.push(product.detailImage4);
+
+  // 切换到上一张图片
+  const goToPrevImage = () => {
+    setActiveImageIndex((prev) => (prev === 0 ? productImages.length - 1 : prev - 1));
+  };
+
+  // 切换到下一张图片
+  const goToNextImage = () => {
+    setActiveImageIndex((prev) => (prev === productImages.length - 1 ? 0 : prev + 1));
+  };
   
   const addItem = useCart((state) => state.addItem);
 
@@ -92,6 +104,44 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // 键盘左右键切换图片
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (productImages.length <= 1) return;
+      if (e.key === 'ArrowLeft') {
+        goToPrevImage();
+      } else if (e.key === 'ArrowRight') {
+        goToNextImage();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [productImages.length]);
+
+  // 触摸滑动切换图片
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    if (isLeftSwipe) {
+      goToNextImage();
+    } else if (isRightSwipe) {
+      goToPrevImage();
+    }
+  };
 
   const handleAddToCart = () => {
     for (let i = 0; i < quantity; i++) {
@@ -149,33 +199,70 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
         <div className="grid lg:grid-cols-2 gap-12">
           {/* Left - Images */}
           <div className="space-y-4">
-            <div className="aspect-square bg-gradient-to-br from-stone-100 via-stone-200 to-stone-300 rounded-2xl flex items-center justify-center relative overflow-hidden shadow-2xl">
-              {product.badge && (
-                <div className="absolute top-6 left-6 bg-amber-500 text-white text-sm font-bold px-4 py-2 rounded-full z-10 shadow-lg">
-                  {product.badge}
+            {/* Main Image with Navigation Arrows */}
+            <div 
+              className="relative"
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+            >
+              <div className="aspect-square bg-gradient-to-br from-stone-100 via-stone-200 to-stone-300 rounded-2xl flex items-center justify-center relative overflow-hidden shadow-2xl">
+                {product.badge && (
+                  <div className="absolute top-6 left-6 bg-amber-500 text-white text-sm font-bold px-4 py-2 rounded-full z-10 shadow-lg">
+                    {product.badge}
+                  </div>
+                )}
+                <div className="absolute top-6 right-6 bg-rose-500 text-white text-sm font-bold px-3 py-1 rounded-full z-10 shadow-lg">
+                  -30%
+                </div>
+                
+                <img 
+                  src={productImages[activeImageIndex]} 
+                  alt={product.name}
+                  loading="eager"
+                  decoding="async"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              </div>
+
+              {/* Left Arrow */}
+              {productImages.length > 1 && (
+                <button
+                  onClick={goToPrevImage}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/90 hover:bg-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-20"
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft className="w-6 h-6 text-gray-800" />
+                </button>
+              )}
+
+              {/* Right Arrow */}
+              {productImages.length > 1 && (
+                <button
+                  onClick={goToNextImage}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/90 hover:bg-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-20"
+                  aria-label="Next image"
+                >
+                  <ChevronRight className="w-6 h-6 text-gray-800" />
+                </button>
+              )}
+
+              {/* Image Counter */}
+              {productImages.length > 1 && (
+                <div className="absolute bottom-4 right-4 bg-black/60 text-white text-sm px-3 py-1 rounded-full z-10">
+                  {activeImageIndex + 1} / {productImages.length}
                 </div>
               )}
-              <div className="absolute top-6 right-6 bg-rose-500 text-white text-sm font-bold px-3 py-1 rounded-full z-10 shadow-lg">
-                -30%
-              </div>
-              
-              <img 
-                src={productImages[activeImageIndex]} 
-                alt={product.name}
-                loading="eager"
-                decoding="async"
-                className="absolute inset-0 w-full h-full object-cover"
-              />
             </div>
 
             {/* Thumbnails - 最多显示5张 */}
             {productImages.length > 1 && (
-              <div className={`grid gap-3 ${productImages.length <= 3 ? 'grid-cols-3' : productImages.length === 4 ? 'grid-cols-4' : 'grid-cols-5'}`}>
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                 {thumbnails.map((thumb, i) => (
                   <button
                     key={i}
                     onClick={() => setActiveImageIndex(i)}
-                    className={`aspect-square rounded-xl overflow-hidden transition-all hover:scale-105 hover:shadow-lg ${
+                    className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden transition-all hover:scale-105 hover:shadow-lg ${
                       i === activeImageIndex ? 'ring-2 ring-amber-500 ring-offset-2 shadow-lg' : 'opacity-70 hover:opacity-100'
                     }`}
                   >
