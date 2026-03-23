@@ -27,6 +27,11 @@ interface Product {
   movement?: string;
   powerReserve?: string;
   functions?: string;
+  // 运营字段（前端展示）
+  waterResistance?: string;
+  sku?: string;
+  weight?: number;
+  description?: string;
   inStock?: boolean;
   badge?: string;
 }
@@ -352,7 +357,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                 {activeTab === "description" && (
                   <div className="space-y-4">
                     <p className="text-gray-800 leading-relaxed">
-                      {product.brand} {product.name} - {t('product.premiumWatch')}
+                      {product.description || `${product.brand} ${product.name} - ${t('product.premiumWatch')}`}
                     </p>
                     <div className="bg-stone-50 rounded-lg p-4">
                       <h4 className="font-medium mb-2 text-gray-900">{t('product.whatsInBox')}</h4>
@@ -371,11 +376,14 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                   <div className="grid grid-cols-2 gap-4">
                     {[
                       { label: t('product.brand'), value: product.brand },
+                      { label: t('product.sku'), value: product.sku },
                       { label: t('product.caseMaterial'), value: product.caseMaterial },
                       { label: t('product.dial'), value: product.dial },
                       { label: t('product.movement'), value: product.movement },
                       { label: t('product.powerReserve'), value: product.powerReserve },
                       { label: t('product.functions'), value: product.functions },
+                      { label: t('product.waterResistance'), value: product.waterResistance },
+                      { label: t('product.weight'), value: product.weight ? `${product.weight}kg` : undefined },
                     ].map(({ label, value }) => (
                       value && (
                         <div key={label} className="py-2 border-b last:border-0">

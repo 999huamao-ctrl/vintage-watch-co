@@ -43,6 +43,11 @@ export async function GET(request: Request) {
         powerReserve: product.powerReserve || '72 hours',
         functions: product.functions || 'Date',
       },
+      // 新增字段
+      waterResistance: product.waterResistance,
+      sku: product.sku,
+      weight: product.weight ? Number(product.weight) : undefined,
+      description: product.description,
       inStock: product.stock > 0,
       badge: product.stock < 10 ? 'Hot' : undefined
     }));
