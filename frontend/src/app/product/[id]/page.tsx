@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
 import ProductDetails from "./ProductDetails";
 
 interface Props {
@@ -8,11 +7,8 @@ interface Props {
 
 async function getProduct(id: string) {
   try {
-    // 获取当前请求的 host
-    const headersList = await headers();
-    const host = headersList.get('host') || 'localhost:3000';
-    const protocol = host.includes('localhost') ? 'http' : 'https';
-    const baseUrl = `${protocol}://${host}`;
+    // 使用相对路径或环境变量
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://horizonoo.cc';
     
     const res = await fetch(`${baseUrl}/api/products`, { 
       cache: 'no-store',
