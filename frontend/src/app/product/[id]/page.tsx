@@ -1,35 +1,59 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { notFound } from "next/navigation";
 import ProductDetails from "./ProductDetails";
+
+interface Product {
+  id: string;
+  name: string;
+  brand: string;
+  price: number;
+  originalPrice: number;
+  category: string;
+  image: string;
+  images: string[];
+  description?: string;
+  caseMaterial?: string;
+  caseDiameter?: number;
+  powerReserve?: string;
+  waterResistance?: string;
+  sku?: string;
+  weight?: number;
+}
 
 interface Props {
   params: Promise<{ id: string }>;
 }
 
-async function getProduct(id: string) {
-  try {
-    // 使用相对路径或环境变量
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://horizonoo.cc';
-    
-    const res = await fetch(`${baseUrl}/api/products`, { 
-      cache: 'no-store',
-      next: { revalidate: 0 }
-    });
-    
-    if (!res.ok) return null;
-    
-    const data = await res.json();
-    if (!data.success) return null;
-    
-    return data.data.find((p: any) => p.id === id) || null;
-  } catch (error) {
-    console.error('Failed to fetch product:', error);
-    return null;
-  }
-}
+export default function ProductPage({ params }: Props) {
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [id, setId] = useState<string>("");
 
-export default async function ProductPage({ params }: Props) {
-  const { id } = await params;
-  const product = await getProduct(id);
+  useEffect(() => {
+    params.then(({ id }) => {
+      setId(id);
+      fetch(`/api/products`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            const found = data.data.find((p: Product) => p.id === id);
+            setProduct(found || null);
+          }
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
+    });
+  }, [params]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
 
   if (!product) {
     notFound();
@@ -37,7 +61,3 @@ export default async function ProductPage({ params }: Props) {
 
   return <ProductDetails product={product} />;
 }
-
-// 强制使用 SSR，在请求时动态获取产品数据
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
