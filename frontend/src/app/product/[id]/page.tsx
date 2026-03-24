@@ -1,6 +1,3 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import { notFound } from "next/navigation";
 import ProductDetails from "./ProductDetails";
 
@@ -22,38 +19,40 @@ interface Product {
   weight?: number;
 }
 
-interface Props {
-  params: Promise<{ id: string }>;
+async function getProduct(id: string): Promise<Product | null> {
+  try {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://horizonoo.cc";
+    const res = await fetch(`${apiUrl}/api/products`, {
+      cache: "no-store",
+    });
+    
+    if (!res.ok) {
+      console.error("API response not OK:", res.status);
+      return null;
+    }
+    
+    const data = await res.json();
+    
+    if (!data.success || !Array.isArray(data.data)) {
+      console.error("Invalid API response format");
+      return null;
+    }
+    
+    const product = data.data.find((p: Product) => p.id === id);
+    return product || null;
+  } catch (error) {
+    console.error("Failed to fetch product:", error);
+    return null;
+  }
 }
 
-export default function ProductPage({ params }: Props) {
-  const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [id, setId] = useState<string>("");
-
-  useEffect(() => {
-    params.then(({ id }) => {
-      setId(id);
-      fetch(`/api/products`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            const found = data.data.find((p: Product) => p.id === id);
-            setProduct(found || null);
-          }
-          setLoading(false);
-        })
-        .catch(() => setLoading(false));
-    });
-  }, [params]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-      </div>
-    );
-  }
+export default async function ProductPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const product = await getProduct(id);
 
   if (!product) {
     notFound();
