@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import ProductDetails from "./ProductDetails";
 
 interface Props {
@@ -7,10 +8,11 @@ interface Props {
 
 async function getProduct(id: string) {
   try {
-    // 在服务端直接调用数据库或使用绝对URL
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    // 获取当前请求的 host
+    const headersList = await headers();
+    const host = headersList.get('host') || 'localhost:3000';
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const baseUrl = `${protocol}://${host}`;
     
     const res = await fetch(`${baseUrl}/api/products`, { 
       cache: 'no-store',

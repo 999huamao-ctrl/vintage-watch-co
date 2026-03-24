@@ -93,7 +93,7 @@ async function fetchFeishuRecords(accessToken: string): Promise<FeishuRecord[]> 
 }
 
 async function getAccessToken(): Promise<string> {
-  const response = await fetch('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', {
+  const response = await fetch('https://open.feishu.cn/open-apis/auth/v3/app_access_token/internal', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -105,10 +105,11 @@ async function getAccessToken(): Promise<string> {
   });
 
   const data = await response.json();
+  console.log('Token response:', JSON.stringify(data, null, 2));
   if (data.code !== 0) {
     throw new Error(`Failed to get access token: ${data.msg}`);
   }
-  return data.tenant_access_token;
+  return data.app_access_token || data.tenant_access_token;
 }
 
 function transformRecord(record: FeishuRecord): ProductData | null {
