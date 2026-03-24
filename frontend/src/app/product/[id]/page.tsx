@@ -38,12 +38,6 @@ export default async function ProductPage({ params }: Props) {
   return <ProductDetails product={product} />;
 }
 
-// 为了静态生成，我们需要知道所有产品ID
-export async function generateStaticParams() {
-  // 构建时不预生成任何页面，全部使用 SSR
-  // 避免构建时 API 未运行导致的错误
-  return [];
-}
-
+// 强制使用 SSR，在请求时动态获取产品数据
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
