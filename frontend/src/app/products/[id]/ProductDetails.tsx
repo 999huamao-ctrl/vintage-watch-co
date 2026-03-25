@@ -166,6 +166,10 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Debug Banner - 验证部署状态 */}
+      <div className="bg-green-500 text-white text-center py-2 text-sm font-bold">
+        多图功能已启用 - Images: {productImages.length}
+      </div>
       <Navbar />
       
       {/* Breadcrumb */}
