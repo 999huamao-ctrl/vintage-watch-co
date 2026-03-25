@@ -1,9 +1,9 @@
-import { notFound } from "next/navigation";
-import { prisma } from "@/lib/db";
-import ProductDetails from "./ProductDetails";
+"use client";
 
-// 强制使用动态渲染
-export const dynamic = 'force-dynamic';
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import ProductDetails from "./ProductDetails";
+import Navbar from "@/components/Navbar";
 
 interface Product {
   id: string;
@@ -16,60 +16,85 @@ interface Product {
   images: string[];
   description?: string;
   caseMaterial?: string;
-  caseDiameter?: number;
-  powerReserve?: string;
   waterResistance?: string;
   sku?: string;
   weight?: number;
+  stock: number;
 }
 
-async function getProduct(id: string): Promise<Product | null> {
-  try {
-    const product = await prisma.product.findUnique({
-      where: { id },
-    });
+export default function ProductPage() {
+  const params = useParams();
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-    if (!product || !product.isActive) {
-      return null;
-    }
+  useEffect(() => {
+    const fetchProduct = async () => {
+      const id = params?.id as string;
+      if (!id) {
+        setLoading(false);
+        return;
+      }
 
-    return {
-      id: product.id,
-      name: product.name,
-      brand: product.brand,
-      price: Number(product.price),
-      originalPrice: Number(product.originalPrice) || Number(product.price) * 1.5,
-      category: product.category,
-      image: product.image,
-      images: [
-        product.image,
-        product.detailImage1,
-        product.detailImage2,
-        product.detailImage3,
-        product.detailImage4,
-      ].filter(Boolean),
-      description: product.description,
-      caseMaterial: product.caseMaterial || 'Stainless Steel',
-      waterResistance: product.waterResistance,
-      sku: product.sku,
-      weight: product.weight ? Number(product.weight) : undefined,
+      try {
+        const res = await fetch(`/api/products/${id}`);
+        if (!res.ok) {
+          if (res.status === 404) {
+            setProduct(null);
+          } else {
+            setError(`Failed to load product: ${res.status}`);
+          }
+          return;
+        }
+        const data = await res.json();
+        if (data.success && data.data) {
+          setProduct(data.data);
+        } else {
+          setProduct(null);
+        }
+      } catch (err) {
+        console.error("Failed to fetch product:", err);
+        setError("Network error");
+      } finally {
+        setLoading(false);
+      }
     };
-  } catch (error) {
-    console.error("Failed to fetch product:", error);
-    return null;
-  }
-}
 
-export default async function ProductPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const product = await getProduct(id);
+    fetchProduct();
+  }, [params]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="flex items-center justify-center h-96">
+          <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="flex items-center justify-center h-96 text-red-500">
+          {error}
+        </div>
+      </div>
+    );
+  }
 
   if (!product) {
-    notFound();
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="flex flex-col items-center justify-center h-96">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
+          <p className="text-gray-600">Product not found</p>
+        </div>
+      </div>
+    );
   }
 
   return <ProductDetails product={product} />;
