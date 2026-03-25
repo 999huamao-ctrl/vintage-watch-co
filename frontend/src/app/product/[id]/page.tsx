@@ -2,6 +2,9 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import ProductDetails from "./ProductDetails";
 
+// 强制使用动态渲染
+export const dynamic = 'force-dynamic';
+
 interface Product {
   id: string;
   name: string;
