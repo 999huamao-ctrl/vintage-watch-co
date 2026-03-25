@@ -1,5 +1,6 @@
 "use client";
 
+// 多图功能已启用 - 2026-03-25
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import ProductDetails from "./ProductDetails";
