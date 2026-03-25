@@ -14,10 +14,7 @@ interface Product {
   price: number;
   originalPrice?: number;
   image: string;
-  detailImage1?: string;
-  detailImage2?: string;
-  detailImage3?: string;
-  detailImage4?: string;
+  images: string[];
   category: string;
   brand?: string;
   stock: number;
@@ -52,12 +49,8 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   
-  // 构建图片数组（首图 + 最多4张细节图）
-  const productImages = [product.image];
-  if (product.detailImage1) productImages.push(product.detailImage1);
-  if (product.detailImage2) productImages.push(product.detailImage2);
-  if (product.detailImage3) productImages.push(product.detailImage3);
-  if (product.detailImage4) productImages.push(product.detailImage4);
+  // 构建图片数组（使用API返回的images数组）
+  const productImages = product.images?.length > 0 ? product.images : [product.image];
 
   // 切换到上一张图片
   const goToPrevImage = () => {
