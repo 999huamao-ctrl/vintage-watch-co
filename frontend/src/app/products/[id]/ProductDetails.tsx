@@ -51,6 +51,12 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   
   // 构建图片数组（使用API返回的images数组）
   const productImages = product.images?.length > 0 ? product.images : [product.image];
+  
+  // Debug: 打印图片数量到控制台
+  useEffect(() => {
+    console.log('Product images count:', productImages.length);
+    console.log('Product images:', productImages);
+  }, [productImages]);
 
   // 切换到上一张图片
   const goToPrevImage = () => {
@@ -218,58 +224,50 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                 />
               </div>
 
-              {/* Left Arrow */}
-              {productImages.length > 1 && (
-                <button
-                  onClick={goToPrevImage}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/90 hover:bg-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-20"
-                  aria-label="Previous image"
-                >
-                  <ChevronLeft className="w-6 h-6 text-gray-800" />
-                </button>
-              )}
+              {/* Left Arrow - 总是显示 */}
+              <button
+                onClick={goToPrevImage}
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/90 hover:bg-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-20"
+                aria-label="Previous image"
+              >
+                <ChevronLeft className="w-6 h-6 text-gray-800" />
+              </button>
 
-              {/* Right Arrow */}
-              {productImages.length > 1 && (
-                <button
-                  onClick={goToNextImage}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/90 hover:bg-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-20"
-                  aria-label="Next image"
-                >
-                  <ChevronRight className="w-6 h-6 text-gray-800" />
-                </button>
-              )}
+              {/* Right Arrow - 总是显示 */}
+              <button
+                onClick={goToNextImage}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/90 hover:bg-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-20"
+                aria-label="Next image"
+              >
+                <ChevronRight className="w-6 h-6 text-gray-800" />
+              </button>
 
-              {/* Image Counter */}
-              {productImages.length > 1 && (
-                <div className="absolute bottom-4 right-4 bg-black/60 text-white text-sm px-3 py-1 rounded-full z-10">
-                  {activeImageIndex + 1} / {productImages.length}
-                </div>
-              )}
+              {/* Image Counter - 总是显示 */}
+              <div className="absolute bottom-4 right-4 bg-black/60 text-white text-sm px-3 py-1 rounded-full z-10">
+                {activeImageIndex + 1} / {productImages.length}
+              </div>
             </div>
 
-            {/* Thumbnails - 最多显示5张 */}
-            {productImages.length > 1 && (
-              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                {thumbnails.map((thumb, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setActiveImageIndex(i)}
-                    className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden transition-all hover:scale-105 hover:shadow-lg ${
-                      i === activeImageIndex ? 'ring-2 ring-amber-500 ring-offset-2 shadow-lg' : 'opacity-70 hover:opacity-100'
-                    }`}
-                  >
-                    <img 
-                      src={thumb.image} 
-                      alt={thumb.label}
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* Thumbnails - 总是显示 */}
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+              {thumbnails.map((thumb, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActiveImageIndex(i)}
+                  className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden transition-all hover:scale-105 hover:shadow-lg ${
+                    i === activeImageIndex ? 'ring-2 ring-amber-500 ring-offset-2 shadow-lg' : 'opacity-70 hover:opacity-100'
+                  }`}
+                >
+                  <img 
+                    src={thumb.image} 
+                    alt={thumb.label}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Right - Product Info */}
